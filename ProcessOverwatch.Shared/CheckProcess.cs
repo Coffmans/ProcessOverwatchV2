@@ -7,8 +7,6 @@ using System.Threading.Tasks;
 
 namespace ProcessOverwatch.Shared
 {
-    public class CheckProcess 
-    {
-        public readonly List<MonitoredProcess> _processes = null!;
-    }
+    public record CheckProcess(List<MonitoredProcess> Processes);
+    public record ProcessStatusResponse(string FriendlyName, string ExecutablePath, bool IsRunning, string MachineName, string RemoteIPPort, string Status);
 }

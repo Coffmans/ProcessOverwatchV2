@@ -15,87 +15,72 @@ namespace ProcessOverwatch.Agent
 {
     public class ProcessMonitorActor : ReceiveActor
     {
-        private readonly MonitoredProcess _process;
-        private readonly IActorRef _notifier;
 
-        public ProcessMonitorActor(MonitoredProcess process, IActorRef notifier)
+        public ProcessMonitorActor()
         {
-            _process = process;
-            _notifier = notifier;
-
-            Receive<CheckProcess>(_ => HandleCheckProcess());
+            Receive<CheckProcess>(HandleCheckProcess);
         }
 
-        private void HandleCheckProcess()
+        private void HandleCheckProcess(CheckProcess msg)
         {
-            bool isRunning = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(_process.ExecutablePath))
-                                     .Any();
-
+            foreach (var process in msg.Processes)
+            {
+                CheckProcessStatus(process);
+            }
+        }
+        private void CheckProcessStatus(MonitoredProcess process)
+        {
+            string status = "Unknown";
+            bool isRunning = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(process.ExecutablePath)).Any();
             if (isRunning)
             {
-                Log.Information($"✅ {_process.FriendlyName} is running.");
-                return;
+                status = $"✅ {process.FriendlyName} is running on {Environment.MachineName}.";
+                Log.Information(status);
             }
-
-            Log.Warning($"❌ {_process.FriendlyName} is NOT running!");
-
-            if (_process.RestartIfNotRunning)
+            else
             {
-                try
+                status = $"❌ {process.FriendlyName} is NOT running on {Environment.MachineName}!";
+                Log.Information(status);
+                if (process.RestartIfNotRunning)
                 {
-                    Process.Start(_process.ExecutablePath);
-                    Log.Information($"🔁 Restarted {_process.FriendlyName}.");
-                    isRunning = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(_process.ExecutablePath))
-                         .Any();
+                    try
+                    {
+                        var startInfo = new ProcessStartInfo
+                        {
+                            FileName = process.ExecutablePath,
+                            Arguments = process.Arguments ?? "",
+                            UseShellExecute = true
+                        };
+
+                        Process.Start(startInfo);
+                        isRunning = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(process.ExecutablePath)).Any();
+
+                        if (isRunning)
+                        {
+                            status = $"🔁 Restarted {process.FriendlyName} on {Environment.MachineName}!";
+                        }
+                        else
+                            status = $"⚠️ Failed to restart {process.FriendlyName} on {Environment.MachineName}.";
+                        Log.Information(status);
+
+                    }
+                    catch (Exception ex)
+                    {
+                        status = $"⚠️ Failed to restart {process.FriendlyName} on {Environment.MachineName} - Check Logging!";
+                        Log.Error($"⚠️ Failed to restart {process.FriendlyName}: {ex.Message}");
+                    }
                 }
-                catch (Exception ex)
-                {
-                    Log.Error($"⚠️ Failed to restart {_process.FriendlyName}: {ex.Message}");
-                }
             }
 
-            SendEmailNotification(isRunning);
-        }
-
-        private void SendEmailNotification(bool isRunning)
-        {
-            var config = AppState.Config;
-
-            try
-            {
-                var client = new SmtpClient(config.SmtpServer, config.SmtpPort)
-                {
-                    EnableSsl = true,
-                    Credentials = new NetworkCredential(config.EmailUser, config.EmailPass)
-                };
-
-                string _emailBody = isRunning
-                    ? $"The process {_process.FriendlyName} ({_process.ExecutablePath}) was restarted successfully at {DateTime.Now}."
-                    : $"The process {_process.FriendlyName} ({_process.ExecutablePath}) was found not running at {DateTime.Now}.";
-
-                var mail = new MailMessage
-                {
-                    From = new MailAddress(config.EmailFrom),
-                    Subject = $"Process {_process.FriendlyName} not running",
-                    Body = _emailBody
-                };
-
-                mail.To.Add(config.EmailTo);
-
-                client.Send(mail);
-
-                Log.Information($"📧 Email sent for {_process.FriendlyName}.");
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"⚠️ Failed to send email: {ex.Message}");
-            }
-        }
-
-        private void Logging(string message)
-        {
-            string logFileName = $"monitor_{DateTime.Now:yyyy-MM-dd}.log";
-            File.AppendAllText(logFileName, $"[{DateTime.Now}] {message}\n");
+            // Send status response back to Controller
+            Sender.Tell(new ProcessStatusResponse(
+                process.FriendlyName,
+                process.ExecutablePath,
+                isRunning,
+                Environment.MachineName,
+                process.IPAddress,
+                status
+            ));
         }
     }
 }

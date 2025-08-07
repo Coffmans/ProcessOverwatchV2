@@ -27,7 +27,7 @@ namespace ProcessOverwatch.Controller
             txtFromEmail.Text = Config.EmailFrom;
             txtToEmail.Text = Config.EmailTo;
             numCheckInterval.Value = Config.MonitorIntervalMinutes > 0 ? Config.MonitorIntervalMinutes : 60;
-            chkAutostartMonitoring.Checked = Config.AutosStartMonitoring;
+            chkAutostartMonitoring.Checked = Config.AutoStartMonitoring;
         }
 
         private void btnOK_Click(object sender, EventArgs e)
@@ -60,7 +60,7 @@ namespace ProcessOverwatch.Controller
             Config.EmailFrom = txtFromEmail.Text.Trim();
             Config.EmailTo = txtToEmail.Text.Trim();
             Config.MonitorIntervalMinutes = (int)numCheckInterval.Value;
-            Config.AutosStartMonitoring = chkAutostartMonitoring.Checked;
+            Config.AutoStartMonitoring = chkAutostartMonitoring.Checked;
 
             DialogResult = DialogResult.OK;
             Close();

@@ -3,11 +3,14 @@ using Akka.Configuration;
 using ProcessOverwatch.Controller.Actors;
 using ProcessOverwatch.Shared;
 using Serilog;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Net.Mail;
 using System.Reflection;
 using System.Timers;
-using Serilog;
+using System.Windows.Forms;
+using static System.ComponentModel.Design.ObjectSelectorEditor;
+
 
 namespace ProcessOverwatch.Controller
 {
@@ -18,8 +21,10 @@ namespace ProcessOverwatch.Controller
 
         private ActorSystem _actorSystem = null!;
         private IActorRef _localMonitorActor = null!;
+        private IActorRef _statusUpdateActor = null!;
+        private IActorRef _localCoordinatorActor = null!;
         private List<IActorRef> _remoteAgents = new List<IActorRef>();
-        private IActorRef _notifierActor = null!;
+        public IActorRef _notifierActor = null!;
 
         private System.Timers.Timer _timer = new System.Timers.Timer();
         private DateTime _nextCheck;
@@ -36,10 +41,10 @@ namespace ProcessOverwatch.Controller
 
         private void LoadState()
         {
-            ProcessConfig.LoadConfig();
+            AppState.LoadState();
 
-            _processesEnabled = new BindingList<MonitoredProcess>(ProcessConfig.Processes.Where(p => p.IsEnabled).ToList());
-            _processesDisabled = new BindingList<MonitoredProcess>(ProcessConfig.Processes.Where(p => !p.IsEnabled).ToList());
+            _processesEnabled = new BindingList<MonitoredProcess>(AppState.Processes.Where(p => p.IsEnabled).ToList());
+            _processesDisabled = new BindingList<MonitoredProcess>(AppState.Processes.Where(p => !p.IsEnabled).ToList());
         }
 
         private void SetupDataBindings()
@@ -83,7 +88,8 @@ namespace ProcessOverwatch.Controller
                 DataPropertyName = "ExecutablePath",
                 HeaderText = "Executable Path",
                 Name = "ExecutablePath",
-                AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+                Width = 500,
+                //AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
                 Resizable = DataGridViewTriState.True
             });
 
@@ -101,15 +107,16 @@ namespace ProcessOverwatch.Controller
             {
                 DataPropertyName = "Arguments",
                 Name = "Arguments",
-                Visible = false
+                Visible = false,
+                Resizable = DataGridViewTriState.True
             });
 
             dgv.Columns.Add(new DataGridViewTextBoxColumn
             {
-                DataPropertyName = "Remote IP/Port",
-                HeaderText = "Remote",
-                Name = "RemoteIPPort",
-                Width = 80,
+                DataPropertyName = "IPAddress",
+                HeaderText = "IP Address",
+                Name = "IPAddress",
+                Width = 140,
                 Resizable = DataGridViewTriState.True
             });
             dgv.Columns.Add(new DataGridViewTextBoxColumn
@@ -117,7 +124,7 @@ namespace ProcessOverwatch.Controller
                 DataPropertyName = "Status",
                 HeaderText = "Status",
                 Name = "Status",
-                Width = 80,
+                Width = 270,
                 Resizable = DataGridViewTriState.True
             });
         }
@@ -129,24 +136,32 @@ namespace ProcessOverwatch.Controller
                     actor.provider = remote
                     remote.dot-netty.tcp {
                         port = 8090
-                        hostname = 192.168.1.100
+                        hostname = 127.0.0.1
                     }
                 }");
 
             _actorSystem = ActorSystem.Create("ProcessMonitorCoordinator");
-            _localMonitorActor = _actorSystem.ActorOf(Props.Create(() => new LocalMonitorActor()), "localMonitor");
+            _statusUpdateActor = _actorSystem.ActorOf(Props.Create(() => new StatusUpdateActor(this)), "statusUpdate");
+            _localMonitorActor = _actorSystem.ActorOf(Props.Create(() => new LocalMonitorActor(_statusUpdateActor)), "localMonitor");
+            _localCoordinatorActor = _actorSystem.ActorOf(Props.Create(() => new CoordinatorActor(_statusUpdateActor, _localMonitorActor)), "localCoordinator");
+            _notifierActor = _actorSystem.ActorOf(Props.Create(() => new EmailNotifierActor(AppState.Config)));
 
-            var remoteAddresses = new List<string>
+            
+            var remoteAddresses = new List<string>();
+            var remoteProcesses = _processesEnabled.Where(p => !string.IsNullOrEmpty(p.IPAddress)).ToList();
+
+            foreach (var process in remoteProcesses)
             {
-                "akka.tcp://AgentSystem@127.0.0.1:8091/user/agent"
-                // Add more addresses here
-            };
+                if (!remoteAddresses.Contains(process.IPAddress))
+                {
+                    remoteAddresses.Add($@"akka.tcp://ProcessMonitor@{process.IPAddress}:8935/user/agent");
+                }
+            }
             foreach (var address in remoteAddresses)
             {
-                var remoteActor = _actorSystem.ActorSelection(address);
-                _remoteAgents.Add(remoteActor.ResolveOne(TimeSpan.FromSeconds(5)).Result);
+                var remoteActor = _actorSystem.ActorSelection(address).ResolveOne(TimeSpan.FromSeconds(5)).Result;
+                _remoteAgents.Add(remoteActor);
             }
-            _notifierActor = _actorSystem.ActorOf(Props.Create(() => new EmailNotifierActor(AppState.Config)));
         }
 
         private void InvokeToNextCheckLabel(string sText)
@@ -223,17 +238,7 @@ namespace ProcessOverwatch.Controller
             var form = new ProcessConfigForm(selected);
             if (form.ShowDialog() == DialogResult.OK)
             {
-                if (AppState.Processes.Any(p =>
-                    !ReferenceEquals(p, selected) &&
-                    string.Equals(p.ExecutablePath, form.Process.ExecutablePath, StringComparison.OrdinalIgnoreCase)))
-                {
-                    MessageBox.Show("Another process with the same executable path already exists.", "Duplicate Entry", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                LogTextBox($"Editing process: {form.Process.FriendlyName}");
-                Log.Information($"Editing process: {form.Process.FriendlyName}");
-                SaveAndReload();
+                ModifyProcess(selected, form.Process);
             }
         }
 
@@ -271,6 +276,85 @@ namespace ProcessOverwatch.Controller
                 SaveAndReload();
             }
         }
+        private void dgvEnabled_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+        {
+            MonitoredProcess? selected = null;
+            selected = dgvEnabled.CurrentRow?.DataBoundItem as MonitoredProcess;
+
+            if (selected == null)
+            {
+                MessageBox.Show("Please select a process to edit.");
+                return;
+            }
+
+            var form = new ProcessConfigForm(selected);
+            if (form.ShowDialog() == DialogResult.OK)
+            {
+                ModifyProcess(selected, form.Process);
+            }
+
+        }
+
+        private void dgvDisabled_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+        {
+            MonitoredProcess? selected = null;
+            selected = dgvDisabled.CurrentRow?.DataBoundItem as MonitoredProcess;
+
+            if (selected == null)
+            {
+                MessageBox.Show("Please select a process to edit.");
+                return;
+            }
+
+            var form = new ProcessConfigForm(selected);
+            if (form.ShowDialog() == DialogResult.OK)
+            {
+                ModifyProcess(selected, form.Process);
+            }
+
+        }
+
+        private void ModifyProcess( MonitoredProcess monitoredProcess, MonitoredProcess updatedMonitoredProcess)
+        {
+            if (AppState.Processes.Any(p => string.Equals(p.ExecutablePath, updatedMonitoredProcess.ExecutablePath, StringComparison.OrdinalIgnoreCase)))
+            {
+                // Check if the selected process is the same as the one being edited
+                if (monitoredProcess.ExecutablePath != updatedMonitoredProcess.ExecutablePath)
+                {
+                    MessageBox.Show("A process with the same executable path already exists.", "Duplicate Entry", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+            }
+            int index = AppState.Processes.FindIndex(x => x == monitoredProcess);
+            if (index != -1)
+            {
+                AppState.Processes[index] = updatedMonitoredProcess;
+            }
+            LogTextBox($"Editing process: {updatedMonitoredProcess.FriendlyName}");
+            Log.Information($"Editing process: {updatedMonitoredProcess.FriendlyName}");
+            SaveAndReload();
+
+        }
+
+        private void MainForm_Resize(object sender, EventArgs e)
+        {
+            if (this.WindowState == FormWindowState.Minimized)
+            {
+                this.ShowInTaskbar = false;
+
+                notifySystemTrayIcon.Visible = true;
+            }
+            else
+            {
+                notifySystemTrayIcon.Visible = false;
+                this.ShowInTaskbar = true;
+            }
+        }
+
+        private void notifySystemTrayIcon_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            this.WindowState = FormWindowState.Normal;
+        }
 
         private void SaveAndReload()
         {
@@ -283,8 +367,8 @@ namespace ProcessOverwatch.Controller
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            base.OnFormClosing(e);
             _actorSystem.Terminate().Wait();
+            base.OnFormClosing(e);
         }
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -297,7 +381,7 @@ namespace ProcessOverwatch.Controller
 
             SetupTimer();
 
-            if(AppState.Config.AutosStartMonitoring)
+            if(AppState.Config.AutoStartMonitoring)
             {
                 InvokeMonitoringProcess();
             }
@@ -326,7 +410,6 @@ namespace ProcessOverwatch.Controller
                 btnStartMonitoring.Text = "Stop";
                 LogTextBox("Monitoring started.");
                 _timer.Start();
-                this.WindowState = FormWindowState.Minimized;
             }
 
         }
@@ -334,121 +417,69 @@ namespace ProcessOverwatch.Controller
         {
             try
             {
-                _localMonitorActor.Tell(new CheckProcess());
+                // Filter local and remote processes
+                var localProcesses = _processesEnabled.Where(p => string.IsNullOrEmpty(p.IPAddress)).ToList();
+                var remoteProcesses = _processesEnabled.Where(p => !string.IsNullOrEmpty(p.IPAddress)).ToList();
 
-                // Tell all remote agents to perform check
-                foreach (var agent in _remoteAgents)
+                // Send local processes to LocalMonitorActor
+                if (localProcesses.Any())
                 {
-                    agent.Tell(new CheckProcess());
+                    _localCoordinatorActor.Tell(new CheckProcess(localProcesses));
+                }
+
+                // Send remote processes to appropriate Agents
+                foreach (var group in remoteProcesses.GroupBy(p => p.IPAddress))
+                {
+                    var agent = _remoteAgents.FirstOrDefault(a => a.Path.ToString().Contains(group.Key));
+                    if (agent != null)
+                    {
+                        agent.Tell(new CheckProcess(group.ToList()), _localCoordinatorActor);
+                    }
+                    else
+                    {
+                        LogTextBox($"Process Watchdog agent not found for {group.Key}");
+                    }
                 }
 
                 _nextCheck = DateTime.Now.AddMinutes(AppState.Config.MonitorIntervalMinutes);
-
-                // Update the label safely
-                if (lblNextCheck.InvokeRequired)
-                {
-                    lblNextCheck.Invoke(() =>
-                    {
-                        lblNextCheck.Text = $"Next Check At: {_nextCheck:HH:mm}";
-                    });
-                }
-                else
-                {
-                    lblNextCheck.Text = $"Next Check At: {_nextCheck:HH:mm}";
-                }
-
+                InvokeToNextCheckLabel($"Next Check At: {_nextCheck:HH:mm}");
             }
             catch (Exception ex)
             {
                 Log.Error(ex, "Failure in Monitoring");
-                throw;
+                LogTextBox($"Monitoring error: {ex.Message}");
             }
         }
+
+        public void UpdateProcessStatus(ProcessStatusResponse response)
+        {
+            var process = _processesEnabled.FirstOrDefault(p =>
+                p.FriendlyName == response.FriendlyName &&
+                p.ExecutablePath == response.ExecutablePath &&
+                p.IPAddress == response.RemoteIPPort);
+            if (process != null)
+            {
+                process.Status = response.Status;
+                LogTextBox($"{process.FriendlyName} on {process.IPAddress}: {process.Status}");
+                _processesEnabled.ResetBindings(); 
+            }
+            else
+            {
+                LogTextBox($"Process not found: {response.FriendlyName} ({response.ExecutablePath}) on {response.MachineName}");
+            }
+        }
+
         private void EnableDisableControls(bool enable)
         {
             btnAddProcess.Enabled = enable;
             btnEditProcess.Enabled = enable;
             btnDeleteProcess.Enabled = enable;
             btnConfig.Enabled = enable;
+
+            dgvEnabled.Enabled = enable;
+            dgvDisabled.Enabled = enable;
         }
 
-        private void dgvEnabled_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
-        {
-            MonitoredProcess? selected = null;
-            selected = dgvEnabled.CurrentRow?.DataBoundItem as MonitoredProcess;
 
-            if (selected == null)
-            {
-                MessageBox.Show("Please select a process to edit.");
-                return;
-            }
-
-            var form = new ProcessConfigForm(selected);
-            if (form.ShowDialog() == DialogResult.OK)
-            {
-                // Check for uniqueness excluding the currently edited one
-                if (AppState.Processes.Any(p =>
-                    !ReferenceEquals(p, selected) &&
-                    string.Equals(p.ExecutablePath, form.Process.ExecutablePath, StringComparison.OrdinalIgnoreCase)))
-                {
-                    MessageBox.Show("Another process with the same executable path already exists.", "Duplicate Entry", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-                LogTextBox($"Editing process: {form.Process.FriendlyName}");
-                Log.Information($"Editing process: {form.Process.FriendlyName}");
-                SaveAndReload();
-            }
-
-        }
-
-        private void dgvDisabled_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
-        {
-            MonitoredProcess? selected = null;
-            selected = dgvDisabled.CurrentRow?.DataBoundItem as MonitoredProcess;
-
-            if (selected == null)
-            {
-                MessageBox.Show("Please select a process to edit.");
-                return;
-            }
-
-            var form = new ProcessConfigForm(selected);
-            if (form.ShowDialog() == DialogResult.OK)
-            {
-                // Check for uniqueness excluding the currently edited one
-                if (AppState.Processes.Any(p =>
-                    !ReferenceEquals(p, selected) &&
-                    string.Equals(p.ExecutablePath, form.Process.ExecutablePath, StringComparison.OrdinalIgnoreCase)))
-                {
-                    MessageBox.Show("Another process with the same executable path already exists.", "Duplicate Entry", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                LogTextBox($"Editing process: {form.Process.FriendlyName}");
-                Log.Information($"Editing process: {form.Process.FriendlyName}");
-                SaveAndReload();
-            }
-
-        }
-
-        private void MainForm_Resize(object sender, EventArgs e)
-        {
-            if (this.WindowState == FormWindowState.Minimized)
-            {
-                this.ShowInTaskbar = false;
-
-                notifySystemTrayIcon.Visible = true;
-            }
-            else
-            {
-                notifySystemTrayIcon.Visible = false;
-                this.ShowInTaskbar = true;
-            }
-        }
-
-        private void notifySystemTrayIcon_MouseDoubleClick(object sender, MouseEventArgs e)
-        {
-            this.WindowState = FormWindowState.Normal;
-        }
     }
 }

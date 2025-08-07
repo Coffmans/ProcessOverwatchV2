@@ -18,7 +18,7 @@ namespace ProcessOverwatch.Controller
         public string EmailUser { get; set; } = "";
         public string EmailPass { get; set; } = "";
         public int MonitorIntervalMinutes { get; set; } = 5;
-        public bool AutosStartMonitoring { get; set; } = false;
+        public bool AutoStartMonitoring { get; set; } = false;
 
         //public static string ConfigFilePath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json");
         public static string ConfigFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "ProcessOverwatch", "config.json");

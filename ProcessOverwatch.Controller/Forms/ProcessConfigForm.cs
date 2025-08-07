@@ -56,7 +56,7 @@ namespace ProcessOverwatch.Controller
             Process.Arguments = txtArguments.Text.Trim();
             Process.IsEnabled = chkEnabled.Checked;
             Process.RestartIfNotRunning = chkRestart.Checked;
-            Process.RemoteIPAndPort = txtRemoteIP.Text.Trim();
+            Process.IPAddress = txtRemoteIP.Text.Trim();
             DialogResult = DialogResult.OK;
             Close();
         }
@@ -70,7 +70,7 @@ namespace ProcessOverwatch.Controller
             txtArguments.Text = Process.Arguments;
             chkEnabled.Checked = Process.IsEnabled;
             chkRestart.Checked = Process.RestartIfNotRunning;
-            txtRemoteIP.Text = Process.RemoteIPAndPort;
+            txtRemoteIP.Text = Process.IPAddress;
         }
     }
 }
