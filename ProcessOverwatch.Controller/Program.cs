@@ -41,7 +41,7 @@ namespace ProcessOverwatch.Controller
                     path: Path.Combine(logDir, "log-.txt"),
                     rollingInterval: RollingInterval.Day,
                     retainedFileCountLimit: 7, // <- keeps only 7 most recent log files
-                    outputTemplate: "[{Timestamp:yyyy-MM-dd}] [{Level:u3}] {Message:lj}{NewLine}{Exception}"
+                    outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss}] [{Level:u3}] {Message:lj}{NewLine}{Exception}"
                 )
                 .CreateLogger();
 

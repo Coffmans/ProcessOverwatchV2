@@ -2,14 +2,22 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net9.0-windows</TargetFramework>
+    <TargetFramework>net9.0-windows7.0</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationIcon>Images\icons64.ico</ApplicationIcon>
+    <AssemblyVersion>2.0.0.1</AssemblyVersion>
+    <FileVersion>2.0.0.1</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Include="Images\icons64.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Folder Include="Forms\" />
+    <Folder Include="Installer\" />
   </ItemGroup>
 
   <ItemGroup>
