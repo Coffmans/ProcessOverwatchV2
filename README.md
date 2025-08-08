@@ -2,6 +2,8 @@
 
 I created this project to allow me to monitor specific processes on my computers. It is designed to support processes on a local machine (using the main app) and on remote machines (using the agent service). 
 
+It is a work-in-progress and needs to be thoroughly tested.
+
 <h3>Functionality</h3>
 <ul>
   <li>Define processes to be monitored</li>
