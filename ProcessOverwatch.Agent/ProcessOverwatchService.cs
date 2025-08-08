@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using Serilog;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -28,13 +29,7 @@ namespace ProcessOverwatch.Agent
             {
                 EventLog.WriteEntry(ServiceName, "OnStart called.", EventLogEntryType.Information);
                 _logger.LogInformation("Service starting at {time}", DateTimeOffset.Now);
-
-                // Test file system access to diagnose logging issue
-                string logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "ProcessOverwatch", "Logs");
-                Directory.CreateDirectory(logDir);
-                string logFile = Path.Combine(logDir, "test.txt");
-                File.WriteAllText(logFile, $"Service started at {DateTimeOffset.Now}");
-                EventLog.WriteEntry(ServiceName, $"Wrote to log file: {logFile}", EventLogEntryType.Information);
+                Log.Information("Process Overwatch Service starting at {time}", DateTimeOffset.Now);
 
                 // Start the main task
                 _mainTask = Task.Run(() => ExecuteAsync(_cts.Token), _cts.Token);
@@ -43,7 +38,7 @@ namespace ProcessOverwatch.Agent
             {
                 EventLog.WriteEntry(ServiceName, $"Error in OnStart: {ex}", EventLogEntryType.Error);
                 _logger.LogError(ex, "Error in OnStart");
-                throw; // Rethrow to notify SCM of failure
+                Log.Error(ex, "Error in OnStart"); 
             }
         }
 
@@ -54,6 +49,7 @@ namespace ProcessOverwatch.Agent
             {
                 EventLog.WriteEntry(ServiceName, "OnStop called.", EventLogEntryType.Information);
                 _logger.LogInformation("Service stopping at {time}", DateTimeOffset.Now);
+                Log.Information("Process Overwatch Service stopping at {time}", DateTimeOffset.Now);
 
                 // Signal cancellation and wait for the main task to complete
                 _cts.Cancel();
@@ -77,13 +73,12 @@ namespace ProcessOverwatch.Agent
             {
                 EventLog.WriteEntry(ServiceName, "StartAsync called (console mode).", EventLogEntryType.Information);
                 _logger.LogInformation("StartAsync (console mode) starting at {time}", DateTimeOffset.Now);
+                Log.Information("Process Overwatch Service StartAsync (console mode) starting at {time}", DateTimeOffset.Now);
 
                 // Same logic as OnStart
                 string logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "ProcessOverwatch", "Logs");
                 Directory.CreateDirectory(logDir);
-                string logFile = Path.Combine(logDir, "test.txt");
-                File.WriteAllText(logFile, $"Console mode started at {DateTimeOffset.Now}");
-                EventLog.WriteEntry(ServiceName, $"Wrote to log file (console mode): {logFile}", EventLogEntryType.Information);
+                Log.Information("Log directory created at {Path}", logDir);
 
                 _mainTask = Task.Run(() => ExecuteAsync(_cts.Token), _cts.Token);
                 await Task.CompletedTask; // For async signature
@@ -92,7 +87,7 @@ namespace ProcessOverwatch.Agent
             {
                 EventLog.WriteEntry(ServiceName, $"Error in StartAsync: {ex}", EventLogEntryType.Error);
                 _logger.LogError(ex, "Error in StartAsync");
-                throw;
+                Log.Error(ex, "Error in StartAsync");
             }
         }
 
@@ -115,6 +110,7 @@ namespace ProcessOverwatch.Agent
             {
                 EventLog.WriteEntry(ServiceName, $"Error in StopAsync: {ex}", EventLogEntryType.Error);
                 _logger.LogError(ex, "Error in StopAsync");
+                Log.Error(ex, "Error in StopAsync");
             }
             finally
             {
@@ -128,6 +124,7 @@ namespace ProcessOverwatch.Agent
             {
                 EventLog.WriteEntry(ServiceName, "ExecuteAsync started.", EventLogEntryType.Information);
                 _logger.LogInformation("ExecuteAsync started at {time}", DateTimeOffset.Now);
+                Log.Information("Process Overwatch Service ExecuteAsync started at {time}", DateTimeOffset.Now);
 
                 // Minimal logic to keep the service running
                 await Task.Delay(Timeout.Infinite, cancellationToken);
@@ -136,6 +133,7 @@ namespace ProcessOverwatch.Agent
             {
                 EventLog.WriteEntry(ServiceName, $"Error in ExecuteAsync: {ex}", EventLogEntryType.Error);
                 _logger.LogError(ex, "Error in ExecuteAsync");
+                Log.Error(ex, "Error in ExecuteAsync");
             }
         }
     }

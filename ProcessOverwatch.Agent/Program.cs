@@ -1,11 +1,11 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using System.ServiceProcess;
 using ProcessOverwatch.Agent;
-using System.Diagnostics;
-
+using Serilog;
 using System;
+using System.Diagnostics;
+using System.ServiceProcess;
 
 namespace ProcessOverwatch.Agent
 {
@@ -15,7 +15,7 @@ namespace ProcessOverwatch.Agent
         {
             try
             {
-                EventLog.WriteEntry("ProcessOverwatchService", "Program.cs started.", EventLogEntryType.Information);
+                ConfigureLogging();
 
                 // Set up dependency injection
                 var services = new ServiceCollection();
@@ -36,6 +36,7 @@ namespace ProcessOverwatch.Agent
                 {
                     // Run as console app for debugging
                     EventLog.WriteEntry("ProcessOverwatchService", "Running in console mode.", EventLogEntryType.Information);
+                    Log.Information("Process Overwatch Service starting in console mode at {time}", DateTimeOffset.Now);
                     await service.StartAsync(args);
                     Console.WriteLine("Service running in console mode. Press any key to stop...");
                     Console.ReadKey();
@@ -45,6 +46,7 @@ namespace ProcessOverwatch.Agent
                 {
                     // Run as Windows service
                     EventLog.WriteEntry("ProcessOverwatchService", "Running as Windows service.", EventLogEntryType.Information);
+                    Log.Information("Process Overwatch Service starting at {time}", DateTimeOffset.Now);
                     ServiceBase.Run(service);
                 }
             }
@@ -52,6 +54,22 @@ namespace ProcessOverwatch.Agent
             {
                 EventLog.WriteEntry("ProcessOverwatchService", $"Error in Program.cs: {ex}", EventLogEntryType.Error);
             }
+        }
+
+        private static void ConfigureLogging()
+        {
+            string logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "ProcessOverwatch", "Logs");
+            Directory.CreateDirectory(logDir); // ensures folder exists
+
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Information()
+                .WriteTo.File(
+                    path: Path.Combine(logDir, "log-.txt"),
+                    rollingInterval: RollingInterval.Day,
+                    retainedFileCountLimit: 7, // <- keeps only 7 most recent log files
+                    outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss}] [{Level:u3}] {Message:lj}{NewLine}{Exception}"
+                )
+                .CreateLogger();
         }
     }
 }
