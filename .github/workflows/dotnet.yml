@@ -22,7 +22,11 @@ jobs:
         dotnet-version: 10.0.x
     - name: Restore dependencies
       run: dotnet restore
-    - name: Build
-      run: dotnet build ProcessOverwatch.Controller.sln --no-restore
+    - name: Build Shared
+      run: dotnet build ProcessOverwatch.Shared/ProcessOverwatch.Shared.csproj --no-restore
+    - name: Build Agent
+      run: dotnet build ProcessOverwatch.Agent/ProcessOverwatch.Agent.csproj --no-restore
+    - name: Build Shared
+      run: dotnet build ProcessOverwatch.Controller/ProcessOverwatch.Controller.csproj --no-restore
     - name: Test
       run: dotnet test --no-build --verbosity normal
