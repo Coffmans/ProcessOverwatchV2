@@ -1,5 +1,5 @@
-#define MyAppName "Process Overwatch Service"
-#define MyAppShortName "Process Overwatch Service"
+#define MyAppName "Process Overwatch Agent"
+#define MyAppShortName "Process Overwatch Agent"
 #define MyAppVersion GetVersionNumbersString("..\bin\Release\net9.0-windows\publish\ProcessOverwatch.Agent.exe")
 #define Copyright = 'Copyright © '+GetDateTimeString('yyyy','','')
 

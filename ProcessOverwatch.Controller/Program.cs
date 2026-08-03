@@ -6,7 +6,8 @@ namespace ProcessOverwatch.Controller
 {
     internal static class Program
     {
-        private static Mutex _mutex = null!;
+        public static Mutex Mutex { get; set; } = null!;
+
         /// <summary>
         ///  The main entry point for the application.
         /// </summary>
@@ -15,8 +16,7 @@ namespace ProcessOverwatch.Controller
         {
 
             const string mutexName = "ProcessOverwatch";
-            bool createdNew;
-            _mutex = new Mutex(true, mutexName, out createdNew);
+            Mutex = new Mutex(true, mutexName, out bool createdNew);
             if (!createdNew)
             {
                 // Another instance is already running
@@ -27,7 +27,7 @@ namespace ProcessOverwatch.Controller
             ApplicationConfiguration.Initialize();
             Application.Run(new MainForm());
 
-            _mutex.ReleaseMutex();
+            Mutex.ReleaseMutex();
         }
 
         private static void ConfigureLogging()

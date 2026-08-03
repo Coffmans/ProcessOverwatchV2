@@ -1,5 +1,7 @@
-﻿using Microsoft.Extensions.Logging;
-using Serilog;
+﻿using Akka.Actor;
+using Akka.Configuration;
+using Microsoft.Extensions.Logging;
+using ProcessOverwatch.Agent.Actors;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -13,12 +15,13 @@ namespace ProcessOverwatch.Agent
     {
         private readonly ILogger<ProcessOverwatchService> _logger;
         private Task _mainTask = null!;
-        private CancellationTokenSource _cts;
+        private readonly CancellationTokenSource _cts;
+        private ActorSystem? _actorSystem;
 
         public ProcessOverwatchService(ILogger<ProcessOverwatchService> logger)
         {
             _logger = logger;
-            ServiceName = "ProcessOverwatchService";
+            ServiceName = "ProcessOverwatchAgent";
             _cts = new CancellationTokenSource();
         }
 
@@ -28,8 +31,6 @@ namespace ProcessOverwatch.Agent
             try
             {
                 EventLog.WriteEntry(ServiceName, "OnStart called.", EventLogEntryType.Information);
-                _logger.LogInformation("Service starting at {time}", DateTimeOffset.Now);
-                Log.Information("Process Overwatch Service starting at {time}", DateTimeOffset.Now);
 
                 // Start the main task
                 _mainTask = Task.Run(() => ExecuteAsync(_cts.Token), _cts.Token);
@@ -38,7 +39,6 @@ namespace ProcessOverwatch.Agent
             {
                 EventLog.WriteEntry(ServiceName, $"Error in OnStart: {ex}", EventLogEntryType.Error);
                 _logger.LogError(ex, "Error in OnStart");
-                Log.Error(ex, "Error in OnStart"); 
             }
         }
 
@@ -48,8 +48,6 @@ namespace ProcessOverwatch.Agent
             try
             {
                 EventLog.WriteEntry(ServiceName, "OnStop called.", EventLogEntryType.Information);
-                _logger.LogInformation("Service stopping at {time}", DateTimeOffset.Now);
-                Log.Information("Process Overwatch Service stopping at {time}", DateTimeOffset.Now);
 
                 // Signal cancellation and wait for the main task to complete
                 _cts.Cancel();
@@ -67,18 +65,15 @@ namespace ProcessOverwatch.Agent
         }
 
         // Public method for console mode start
-        public async Task StartAsync(string[] args)
+        public async Task StartAsync()
         {
             try
             {
                 EventLog.WriteEntry(ServiceName, "StartAsync called (console mode).", EventLogEntryType.Information);
-                _logger.LogInformation("StartAsync (console mode) starting at {time}", DateTimeOffset.Now);
-                Log.Information("Process Overwatch Service StartAsync (console mode) starting at {time}", DateTimeOffset.Now);
 
                 // Same logic as OnStart
                 string logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "ProcessOverwatch", "Logs");
                 Directory.CreateDirectory(logDir);
-                Log.Information("Log directory created at {Path}", logDir);
 
                 _mainTask = Task.Run(() => ExecuteAsync(_cts.Token), _cts.Token);
                 await Task.CompletedTask; // For async signature
@@ -87,7 +82,6 @@ namespace ProcessOverwatch.Agent
             {
                 EventLog.WriteEntry(ServiceName, $"Error in StartAsync: {ex}", EventLogEntryType.Error);
                 _logger.LogError(ex, "Error in StartAsync");
-                Log.Error(ex, "Error in StartAsync");
             }
         }
 
@@ -97,10 +91,9 @@ namespace ProcessOverwatch.Agent
             try
             {
                 EventLog.WriteEntry(ServiceName, "StopAsync called (console mode).", EventLogEntryType.Information);
-                _logger.LogInformation("StopAsync (console mode) stopping at {time}", DateTimeOffset.Now);
 
                 // Same logic as OnStop
-                _cts.Cancel();
+                await _cts.CancelAsync();
                 if (_mainTask != null)
                 {
                     await Task.WhenAny(_mainTask, Task.Delay(5000)); // Wait up to 5 seconds
@@ -110,7 +103,6 @@ namespace ProcessOverwatch.Agent
             {
                 EventLog.WriteEntry(ServiceName, $"Error in StopAsync: {ex}", EventLogEntryType.Error);
                 _logger.LogError(ex, "Error in StopAsync");
-                Log.Error(ex, "Error in StopAsync");
             }
             finally
             {
@@ -123,17 +115,38 @@ namespace ProcessOverwatch.Agent
             try
             {
                 EventLog.WriteEntry(ServiceName, "ExecuteAsync started.", EventLogEntryType.Information);
-                _logger.LogInformation("ExecuteAsync started at {time}", DateTimeOffset.Now);
-                Log.Information("Process Overwatch Service ExecuteAsync started at {time}", DateTimeOffset.Now);
 
-                // Minimal logic to keep the service running
+                var config = ConfigurationFactory.ParseString(@"
+                    akka {
+                        actor {
+                            provider = remote
+                        }
+                        remote {
+                            dot-netty.tcp {
+                                hostname = ""0.0.0.0""
+                                public-hostname = ""192.168.1.139""
+                                port = 8935
+                            }
+                        }
+                    }");
+
+                _actorSystem = ActorSystem.Create("ProcessOverwatchAgent", config);
+                _actorSystem.ActorOf(Props.Create(() => new ProcessMonitorActor()), "agent");
+
+                EventLog.WriteEntry(ServiceName, "Actor system started, listening on port 8935.", EventLogEntryType.Information);
+
+                // Keep running until cancelled
                 await Task.Delay(Timeout.Infinite, cancellationToken);
             }
             catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
             {
                 EventLog.WriteEntry(ServiceName, $"Error in ExecuteAsync: {ex}", EventLogEntryType.Error);
                 _logger.LogError(ex, "Error in ExecuteAsync");
-                Log.Error(ex, "Error in ExecuteAsync");
+            }
+            finally
+            {
+                if (_actorSystem != null)
+                    await _actorSystem.Terminate();
             }
         }
     }

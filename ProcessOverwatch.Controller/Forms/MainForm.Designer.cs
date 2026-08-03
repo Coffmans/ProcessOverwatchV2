@@ -85,7 +85,7 @@
             dgvEnabled.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvEnabled.Size = new Size(1144, 298);
             dgvEnabled.TabIndex = 0;
-            dgvEnabled.CellDoubleClick += dgvEnabled_CellDoubleClick;
+            dgvEnabled.CellDoubleClick += DgvEnabled_CellDoubleClick;
             // 
             // tabDisabled
             // 
@@ -93,7 +93,7 @@
             tabDisabled.Location = new Point(4, 24);
             tabDisabled.Name = "tabDisabled";
             tabDisabled.Padding = new Padding(3);
-            tabDisabled.Size = new Size(823, 304);
+            tabDisabled.Size = new Size(1150, 304);
             tabDisabled.TabIndex = 1;
             tabDisabled.Text = "Disabled";
             tabDisabled.UseVisualStyleBackColor = true;
@@ -111,9 +111,9 @@
             dgvDisabled.ReadOnly = true;
             dgvDisabled.RowHeadersVisible = false;
             dgvDisabled.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvDisabled.Size = new Size(817, 298);
+            dgvDisabled.Size = new Size(1144, 298);
             dgvDisabled.TabIndex = 0;
-            dgvDisabled.CellDoubleClick += dgvDisabled_CellDoubleClick;
+            dgvDisabled.CellDoubleClick += DgvDisabled_CellDoubleClick;
             // 
             // btnAddProcess
             // 
@@ -123,7 +123,7 @@
             btnAddProcess.TabIndex = 1;
             btnAddProcess.Text = "Add";
             btnAddProcess.UseVisualStyleBackColor = true;
-            btnAddProcess.Click += btnAddProcess_Click;
+            btnAddProcess.Click += BtnAddProcess_Click;
             // 
             // btnEditProcess
             // 
@@ -133,7 +133,7 @@
             btnEditProcess.TabIndex = 2;
             btnEditProcess.Text = "Edit";
             btnEditProcess.UseVisualStyleBackColor = true;
-            btnEditProcess.Click += btnEditProcess_Click;
+            btnEditProcess.Click += BtnEditProcess_Click;
             // 
             // btnDeleteProcess
             // 
@@ -143,7 +143,7 @@
             btnDeleteProcess.TabIndex = 3;
             btnDeleteProcess.Text = "Delete";
             btnDeleteProcess.UseVisualStyleBackColor = true;
-            btnDeleteProcess.Click += btnDeleteProcess_Click;
+            btnDeleteProcess.Click += BtnDeleteProcess_Click;
             // 
             // btnConfig
             // 
@@ -153,7 +153,7 @@
             btnConfig.TabIndex = 4;
             btnConfig.Text = "Config";
             btnConfig.UseVisualStyleBackColor = true;
-            btnConfig.Click += btnConfig_Click;
+            btnConfig.Click += BtnConfig_Click;
             // 
             // lblNextCheck
             // 
@@ -182,7 +182,7 @@
             btnStartMonitoring.TabIndex = 7;
             btnStartMonitoring.Text = "Start";
             btnStartMonitoring.UseVisualStyleBackColor = true;
-            btnStartMonitoring.Click += btnStartMonitoring_Click;
+            btnStartMonitoring.Click += BtnStartMonitoring_Click;
             // 
             // label1
             // 
@@ -199,7 +199,7 @@
             notifySystemTrayIcon.Icon = (Icon)resources.GetObject("notifySystemTrayIcon.Icon");
             notifySystemTrayIcon.Text = "Process Overwatch";
             notifySystemTrayIcon.Visible = true;
-            notifySystemTrayIcon.MouseDoubleClick += notifySystemTrayIcon_MouseDoubleClick;
+            notifySystemTrayIcon.MouseDoubleClick += NotifySystemTrayIcon_MouseDoubleClick;
             // 
             // MainForm
             // 
@@ -215,7 +215,7 @@
             Controls.Add(tabControl);
             Icon = (Icon)resources.GetObject("$this.Icon");
             Name = "MainForm";
-            Text = "Process Monitor";
+            Text = "Process Overwatch";
             Load += MainForm_Load;
             Resize += MainForm_Resize;
             tabControl.ResumeLayout(false);

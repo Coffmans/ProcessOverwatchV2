@@ -29,7 +29,7 @@ namespace ProcessOverwatch.Controller
             }
         }
 
-        private void btnBrowse_Click(object sender, EventArgs e)
+        private void BtnBrowse_Click(object sender, EventArgs e)
         {
             using var dlg = new OpenFileDialog();
             dlg.Filter = "Executable Files (*.exe)|*.exe|All Files (*.*)|*.*";
@@ -39,7 +39,7 @@ namespace ProcessOverwatch.Controller
             }
         }
 
-        private void btnOK_Click(object sender, EventArgs e)
+        private void BtnOK_Click(object sender, EventArgs e)
         {
             if (string.IsNullOrWhiteSpace(txtFriendlyName.Text))
             {
@@ -61,7 +61,7 @@ namespace ProcessOverwatch.Controller
             Close();
         }
 
-        private void btnCancel_Click(object sender, EventArgs e) => Close();
+        private void BtnCancel_Click(object sender, EventArgs e) => Close();
 
         private void ProcessConfigForm_Load(object sender, EventArgs e)
         {

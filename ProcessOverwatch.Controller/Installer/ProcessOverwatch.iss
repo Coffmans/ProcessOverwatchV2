@@ -12,7 +12,7 @@
 AppId={{CE96205F-A9A3-4DCB-9BC9-EAD482FB8058}}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
-AppVername={#MyAppName} {#MyAppVersion}
+AppVername={#MyAppName}
 AppCopyright={#Copyright}
 DefaultDirName={commonpf}\ProcessOverwatch\Controller
 DefaultGroupName={#MyAppName}

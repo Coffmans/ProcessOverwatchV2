@@ -78,7 +78,7 @@
             btnBrowse.TabIndex = 4;
             btnBrowse.Text = "...";
             btnBrowse.UseVisualStyleBackColor = true;
-            btnBrowse.Click += btnBrowse_Click;
+            btnBrowse.Click += BtnBrowse_Click;
             // 
             // lblArguments
             // 
@@ -124,7 +124,7 @@
             btnOK.TabIndex = 9;
             btnOK.Text = "OK";
             btnOK.UseVisualStyleBackColor = true;
-            btnOK.Click += btnOK_Click;
+            btnOK.Click += BtnOK_Click;
             // 
             // btnCancel
             // 
@@ -134,7 +134,7 @@
             btnCancel.TabIndex = 10;
             btnCancel.Text = "Cancel";
             btnCancel.UseVisualStyleBackColor = true;
-            btnCancel.Click += btnCancel_Click;
+            btnCancel.Click += BtnCancel_Click;
             // 
             // label1
             // 

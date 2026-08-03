@@ -6,14 +6,9 @@ using System.Threading.Tasks;
 
 namespace ProcessOverwatch.Controller
 {
-    public class SendNotification
+    public class SendNotification(string subject, string body)
     {
-        public string Subject { get; }
-        public string Body { get; }
-        public SendNotification(string subject, string body)
-        {
-            Subject = subject;
-            Body = body;
-        }
+        public string Subject { get; } = subject;
+        public string Body { get; } = body;
     }
 }

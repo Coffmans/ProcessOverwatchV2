@@ -23,6 +23,8 @@ namespace ProcessOverwatch.Controller.Actors
             Receive<CheckProcess>(HandleCheckProcess);
         }
 
+        public IActorRef StatusUpdateActor => _statusUpdateActor;
+
         private void HandleCheckProcess(CheckProcess msg)
         {
             foreach (var process in msg.Processes)
@@ -33,34 +35,35 @@ namespace ProcessOverwatch.Controller.Actors
                     continue; // Skip remote processes
                 }
 
-                string status = "Unknown";
-                bool isRunning = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(process.ExecutablePath)).Any();
+                bool isRunning = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(process.ExecutablePath)).Length != 0;
 
+
+                string status;
                 if (isRunning)
                 {
                     status = $"✅ {process.FriendlyName} is running.";
-                    Log.Information(status);
+                    Log.Information("✅ {FriendlyName} is running.", process.FriendlyName);
                 }
                 else
                 {
                     status = $"❌ {process.FriendlyName} is NOT running!";
-                   Log.Warning(status);
+                    Log.Warning("❌ {FriendlyName} is NOT running!", process.FriendlyName);
 
                     if (process.RestartIfNotRunning)
                     {
                         try
                         {
-                            
+
                             Process.Start(process.ExecutablePath);
                             status = $"🔁 Restarted {process.FriendlyName}.";
-                            Log.Information(status);
-                            
-                            isRunning = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(process.ExecutablePath)).Any();
+                            Log.Information("🔁 Restarted {FriendlyName}.", process.FriendlyName);
+
+                            isRunning = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(process.ExecutablePath)).Length != 0;
                         }
                         catch (Exception ex)
                         {
                             status = $"⚠️ Failed to restart {process.FriendlyName}";
-                            Log.Error($"⚠️ Failed to restart {process.FriendlyName}: {ex.Message}");
+                            Log.Error(ex, "⚠️ Failed to restart {FriendlyName}", process.FriendlyName);
                         }
                     }
                 }

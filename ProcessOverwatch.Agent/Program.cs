@@ -9,9 +9,9 @@ using System.ServiceProcess;
 
 namespace ProcessOverwatch.Agent
 {
-    class Program
+    static class Program
     {
-        static async Task Main(string[] args)
+        static async Task Main()
         {
             try
             {
@@ -35,9 +35,9 @@ namespace ProcessOverwatch.Agent
                 if (Environment.UserInteractive)
                 {
                     // Run as console app for debugging
-                    EventLog.WriteEntry("ProcessOverwatchService", "Running in console mode.", EventLogEntryType.Information);
-                    Log.Information("Process Overwatch Service starting in console mode at {time}", DateTimeOffset.Now);
-                    await service.StartAsync(args);
+                    EventLog.WriteEntry("ProcessOverwatchAgent", "Running in console mode.", EventLogEntryType.Information);
+                    Log.Information("ProcessOverwatchAgent starting in console mode at {Time}", DateTimeOffset.Now);
+                    await service.StartAsync();
                     Console.WriteLine("Service running in console mode. Press any key to stop...");
                     Console.ReadKey();
                     await service.StopAsync();
@@ -45,8 +45,8 @@ namespace ProcessOverwatch.Agent
                 else
                 {
                     // Run as Windows service
-                    EventLog.WriteEntry("ProcessOverwatchService", "Running as Windows service.", EventLogEntryType.Information);
-                    Log.Information("Process Overwatch Service starting at {time}", DateTimeOffset.Now);
+                    EventLog.WriteEntry("ProcessOverwatchAgent", "Running as Windows service.", EventLogEntryType.Information);
+                    Log.Information("ProcessOverwatchAgent starting at {Time}", DateTimeOffset.Now);
                     ServiceBase.Run(service);
                 }
             }

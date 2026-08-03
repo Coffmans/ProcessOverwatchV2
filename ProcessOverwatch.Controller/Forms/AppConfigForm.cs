@@ -30,7 +30,7 @@ namespace ProcessOverwatch.Controller
             chkAutostartMonitoring.Checked = Config.AutoStartMonitoring;
         }
 
-        private void btnOK_Click(object sender, EventArgs e)
+        private void BtnOK_Click(object sender, EventArgs e)
         {
             bool _bNoEmailSettingsToBeSaved = false;
             if (string.IsNullOrWhiteSpace(txtSmtpServer.Text))
@@ -66,9 +66,9 @@ namespace ProcessOverwatch.Controller
             Close();
         }
 
-        private void btnCancel_Click(object sender, EventArgs e) => Close();
+        private void BtnCancel_Click(object sender, EventArgs e) => Close();
 
-        private void button1_Click(object sender, EventArgs e)
+        private void BtnTogglePassword_Click(object sender, EventArgs e)
         {
             txtSmtpPass.UseSystemPasswordChar = !txtSmtpPass.UseSystemPasswordChar;
         }

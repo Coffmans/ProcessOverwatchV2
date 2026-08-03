@@ -8,6 +8,11 @@ namespace ProcessOverwatch.Controller
 {
     public class AppConfig
     {
+        private static readonly System.Text.Json.JsonSerializerOptions s_serializerOptions = new()
+        {
+            WriteIndented = true
+        };
+
         public string SmtpServer { get; set; } = "";
         public int SmtpPort { get; set; } = 587;
         public string SmtpUser { get; set; } = "";
@@ -19,8 +24,6 @@ namespace ProcessOverwatch.Controller
         public string EmailPass { get; set; } = "";
         public int MonitorIntervalMinutes { get; set; } = 5;
         public bool AutoStartMonitoring { get; set; } = false;
-
-        //public static string ConfigFilePath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json");
         public static string ConfigFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "ProcessOverwatch", "config.json");
 
         public static AppConfig Load()
@@ -35,10 +38,7 @@ namespace ProcessOverwatch.Controller
 
         public void Save()
         {
-            var json = System.Text.Json.JsonSerializer.Serialize(this, new System.Text.Json.JsonSerializerOptions
-            {
-                WriteIndented = true
-            });
+            var json = System.Text.Json.JsonSerializer.Serialize(this, s_serializerOptions);
             File.WriteAllText(ConfigFilePath, json);
         }
     }

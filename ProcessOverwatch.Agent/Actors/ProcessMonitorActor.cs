@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 using Serilog;
 using ProcessOverwatch.Shared;
 
-namespace ProcessOverwatch.Agent
+namespace ProcessOverwatch.Agent.Actors
 {
     public class ProcessMonitorActor : ReceiveActor
     {
@@ -30,8 +30,8 @@ namespace ProcessOverwatch.Agent
         }
         private void CheckProcessStatus(MonitoredProcess process)
         {
-            string status = "Unknown";
-            bool isRunning = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(process.ExecutablePath)).Any();
+            string status;
+            bool isRunning = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(process.ExecutablePath)).Length != 0;
             if (isRunning)
             {
                 status = $"✅ {process.FriendlyName} is running on {Environment.MachineName}.";
@@ -53,7 +53,7 @@ namespace ProcessOverwatch.Agent
                         };
 
                         Process.Start(startInfo);
-                        isRunning = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(process.ExecutablePath)).Any();
+                        isRunning = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(process.ExecutablePath)).Length != 0;
 
                         if (isRunning)
                         {
@@ -67,7 +67,7 @@ namespace ProcessOverwatch.Agent
                     catch (Exception ex)
                     {
                         status = $"⚠️ Failed to restart {process.FriendlyName} on {Environment.MachineName} - Check Logging!";
-                        Log.Error($"⚠️ Failed to restart {process.FriendlyName}: {ex.Message}");
+                        Log.Error(ex, "⚠️ Failed to restart {FriendlyName}", process.FriendlyName);
                     }
                 }
             }

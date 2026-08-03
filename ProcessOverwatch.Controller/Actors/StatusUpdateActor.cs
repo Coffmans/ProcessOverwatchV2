@@ -32,7 +32,7 @@ namespace ProcessOverwatch.Controller.Actors
             // Notify EmailNotifierActor for non-running processes
             if (!response.IsRunning)
             {
-                _form._notifierActor.Tell(response);
+                _form.GetNotifierActor().Tell(response);
             }
         }
     }

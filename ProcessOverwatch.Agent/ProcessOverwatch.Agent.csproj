@@ -1,9 +1,10 @@
-<Project Sdk="Microsoft.NET.Sdk.Worker">
+﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
 
   <PropertyGroup>
-    <TargetFramework>net9.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows7.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <NeutralLanguage>en</NeutralLanguage>
     <UserSecretsId>dotnet-ProcessOverwatch.Agent-defbc888-6159-4608-b745-d8cda92c656a</UserSecretsId>
     <OutputType>Exe</OutputType>
     <AssemblyVersion>2.0.0.1</AssemblyVersion>
@@ -11,12 +12,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Akka" Version="1.5.46" />
-    <PackageReference Include="Akka.Remote" Version="1.5.46" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.8" />
-    <PackageReference Include="Serilog" Version="4.3.0" />
+    <PackageReference Include="Akka" Version="1.5.70" />
+    <PackageReference Include="Akka.Remote" Version="1.5.70" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.10" />
+    <PackageReference Include="Serilog" Version="4.4.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
-    <PackageReference Include="System.ServiceProcess.ServiceController" Version="9.0.8" />
+    <PackageReference Include="System.ServiceProcess.ServiceController" Version="10.0.10" />
   </ItemGroup>
 
   <ItemGroup>

@@ -10,22 +10,47 @@ namespace ProcessOverwatch.Controller
 {
     public static class AppState
     {
-        public static List<MonitoredProcess> Processes = new();
-        public static AppConfig Config = new();
-        public static string _processesFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "ProcessOverwatch", "processes.json");
+        private static List<MonitoredProcess> processes = [];
+        private static AppConfig config = new();
+        public static string ProcessesFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "ProcessOverwatch", "processes.json");
+
+        public static AppConfig GetConfig()
+        {
+            return config;
+        }
+
+        public static void SetConfig(AppConfig value)
+        {
+            config = value;
+        }
+
+        public static List<MonitoredProcess> GetProcesses()
+        {
+            return processes;
+        }
+
+        public static void SetProcesses(List<MonitoredProcess> value)
+        {
+            processes = value;
+        }
+
+        private static readonly System.Text.Json.JsonSerializerOptions s_serializerOptions = new()
+        {
+            WriteIndented = true
+        };
 
         public static void LoadState()
         {
-            if (File.Exists(_processesFilePath))
-                Processes = JsonSerializer.Deserialize<List<MonitoredProcess>>(File.ReadAllText(_processesFilePath)) ?? new();
+            if (File.Exists(ProcessesFilePath))
+                SetProcesses(JsonSerializer.Deserialize<List<MonitoredProcess>>(File.ReadAllText(ProcessesFilePath)) ?? []);
 
-            Config = AppConfig.Load();
+            SetConfig(AppConfig.Load());
         }
 
         public static void SaveState()
         {
-            File.WriteAllText(_processesFilePath, JsonSerializer.Serialize(Processes, new JsonSerializerOptions { WriteIndented = true }));
-            Config.Save();
+            File.WriteAllText(ProcessesFilePath, JsonSerializer.Serialize(GetProcesses(), s_serializerOptions));
+            GetConfig().Save();
         }
     }
 }

@@ -10,41 +10,49 @@ using System.Reflection;
 using System.Timers;
 using System.Windows.Forms;
 using static System.ComponentModel.Design.ObjectSelectorEditor;
-
+using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace ProcessOverwatch.Controller
 {
     public partial class MainForm : Form
     {
-        private BindingList<MonitoredProcess> _processesEnabled = new();
-        private BindingList<MonitoredProcess> _processesDisabled = new();
+        private BindingList<MonitoredProcess> _processesEnabled = [];
+        private BindingList<MonitoredProcess> _processesDisabled = [];
 
-        private ActorSystem _actorSystem = null!;
+        private ActorSystem? _actorSystem;
         private IActorRef _localMonitorActor = null!;
         private IActorRef _statusUpdateActor = null!;
         private IActorRef _localCoordinatorActor = null!;
-        private List<IActorRef> _remoteAgents = new List<IActorRef>();
-        public IActorRef _notifierActor = null!;
+        private readonly List<IActorRef> _remoteAgents = [];
+        private IActorRef notifierActor = null!;
 
-        private System.Timers.Timer _timer = new System.Timers.Timer();
+        private readonly System.Timers.Timer _timer = new();
         private DateTime _nextCheck;
 
         private bool _isMonitoring = false;
+        private bool _isExecutingMonitorCheck;
+
+        public IActorRef GetNotifierActor()
+        {
+            return notifierActor;
+        }
+
+        public void SetNotifierActor(IActorRef value)
+        {
+            notifierActor = value;
+        }
 
         private delegate void InvokeNextCheckLabelDelegate(string sText);
 
-        public MainForm()
-        {
-            InitializeComponent();
-
-        }
+        public MainForm() => InitializeComponent();
 
         private void LoadState()
         {
             AppState.LoadState();
 
-            _processesEnabled = new BindingList<MonitoredProcess>(AppState.Processes.Where(p => p.IsEnabled).ToList());
-            _processesDisabled = new BindingList<MonitoredProcess>(AppState.Processes.Where(p => !p.IsEnabled).ToList());
+            _processesEnabled = new BindingList<MonitoredProcess>([.. AppState.GetProcesses().Where(p =>p.IsEnabled)]);
+            _processesDisabled = new BindingList<MonitoredProcess>([.. AppState.GetProcesses().Where(p => !p.IsEnabled)]);
         }
 
         private void SetupDataBindings()
@@ -70,7 +78,7 @@ namespace ProcessOverwatch.Controller
 
         }
 
-        private void SetupColumns(DataGridView dgv)
+        private static void SetupColumns(DataGridView dgv)
         {
             dgv.Columns.Clear();
 
@@ -129,38 +137,46 @@ namespace ProcessOverwatch.Controller
             });
         }
 
-        private void SetupActors()
+        private async Task SetupActorsAsync()
         {
             var config = ConfigurationFactory.ParseString(@"
-                akka {
-                    actor.provider = remote
-                    remote.dot-netty.tcp {
-                        port = 8090
-                        hostname = 127.0.0.1
+            akka {
+                actor {
+                    provider = remote
+                }
+                remote {
+                    dot-netty.tcp {
+                        hostname = ""0.0.0.0""
+                        public-hostname = ""192.168.1.139""
+                        port = 8935
                     }
-                }");
+                }
+            }");
 
-            _actorSystem = ActorSystem.Create("ProcessMonitorCoordinator");
+            _actorSystem = ActorSystem.Create("ProcessMonitor", config);
             _statusUpdateActor = _actorSystem.ActorOf(Props.Create(() => new StatusUpdateActor(this)), "statusUpdate");
             _localMonitorActor = _actorSystem.ActorOf(Props.Create(() => new LocalMonitorActor(_statusUpdateActor)), "localMonitor");
             _localCoordinatorActor = _actorSystem.ActorOf(Props.Create(() => new CoordinatorActor(_statusUpdateActor, _localMonitorActor)), "localCoordinator");
-            _notifierActor = _actorSystem.ActorOf(Props.Create(() => new EmailNotifierActor(AppState.Config)));
+            SetNotifierActor(_actorSystem.ActorOf(Props.Create(() => new EmailNotifierActor(AppState.GetConfig()))));
 
             
             var remoteAddresses = new List<string>();
             var remoteProcesses = _processesEnabled.Where(p => !string.IsNullOrEmpty(p.IPAddress)).ToList();
-
-            foreach (var process in remoteProcesses)
-            {
-                if (!remoteAddresses.Contains(process.IPAddress))
-                {
-                    remoteAddresses.Add($@"akka.tcp://ProcessMonitor@{process.IPAddress}:8935/user/agent");
-                }
-            }
+            remoteAddresses.AddRange(from process in remoteProcesses
+                                     where !remoteAddresses.Contains(process.IPAddress)
+                                     select $@"akka.tcp://ProcessOverwatchAgent@{process.IPAddress}:8935/user/agent");
             foreach (var address in remoteAddresses)
             {
-                var remoteActor = _actorSystem.ActorSelection(address).ResolveOne(TimeSpan.FromSeconds(5)).Result;
-                _remoteAgents.Add(remoteActor);
+                try
+                {
+                    var remoteActor = await _actorSystem.ActorSelection(address).ResolveOne(TimeSpan.FromSeconds(10));
+                    _remoteAgents.Add(remoteActor);
+                }
+                catch (ActorNotFoundException ex)
+                {
+                    // Log and continue - remote agent not available
+                    Log.Warning(ex, "Remote agent not available at {Address}", address);
+                }
             }
         }
 
@@ -177,12 +193,11 @@ namespace ProcessOverwatch.Controller
 
         private void SetupTimer()
         {
-            _timer.Interval = (AppState.Config.MonitorIntervalMinutes * 60000);
-            _nextCheck = DateTime.Now.AddMinutes(AppState.Config.MonitorIntervalMinutes);
+            _timer.Interval = (AppState.GetConfig().MonitorIntervalMinutes * 60000);
+            _nextCheck = DateTime.Now.AddMinutes(AppState.GetConfig().MonitorIntervalMinutes);
             lblNextCheck.Text = $"Next Check At: {_nextCheck:HH:mm}";
 
             _timer.Elapsed += new ElapsedEventHandler(MonitorTimer!);
-            _timer.AutoReset = true;
             _timer.Enabled = true;
         }
 
@@ -203,27 +218,27 @@ namespace ProcessOverwatch.Controller
             }
         }
 
-        private void btnAddProcess_Click(object sender, EventArgs e)
+        private async void BtnAddProcess_Click(object sender, EventArgs e)
         {
             var form = new ProcessConfigForm();
-            if (form.ShowDialog() == DialogResult.OK)
+            if (await form.ShowDialogAsync() == DialogResult.OK)
             {
-                if (AppState.Processes.Any(p => string.Equals(p.ExecutablePath, form.Process.ExecutablePath, StringComparison.OrdinalIgnoreCase)))
+                if (AppState.GetProcesses().Any(p => string.Equals(p.ExecutablePath, form.Process.ExecutablePath, StringComparison.OrdinalIgnoreCase)))
                 {
                     MessageBox.Show("A process with the same executable path already exists.", "Duplicate Entry", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
-                Log.Information($"Adding process: {form.Process.FriendlyName}");
+                Log.Information("Adding process: {FriendlyName}", form.Process.FriendlyName);
                 LogTextBox($"Adding process: {form.Process.FriendlyName}");
-                AppState.Processes.Add(form.Process);
-                SaveAndReload();
+                AppState.GetProcesses().Add(form.Process);
+                await SaveAndReload();
             }
         }
 
-        private void btnEditProcess_Click(object sender, EventArgs e)
+        private async void BtnEditProcess_Click(object sender, EventArgs e)
         {
-            MonitoredProcess? selected = null;
+            MonitoredProcess? selected;
             if (tabControl.SelectedTab == tabEnabled)
                 selected = dgvEnabled.CurrentRow?.DataBoundItem as MonitoredProcess;
             else
@@ -236,15 +251,15 @@ namespace ProcessOverwatch.Controller
             }
 
             var form = new ProcessConfigForm(selected);
-            if (form.ShowDialog() == DialogResult.OK)
+            if (await form.ShowDialogAsync() == DialogResult.OK)
             {
-                ModifyProcess(selected, form.Process);
+                await ModifyProcess(selected, form.Process);
             }
         }
 
-        private void btnDeleteProcess_Click(object sender, EventArgs e)
+        private async void BtnDeleteProcess_Click(object sender, EventArgs e)
         {
-            MonitoredProcess? selected = null;
+            MonitoredProcess? selected;
             if (tabControl.SelectedTab == tabEnabled)
                 selected = dgvEnabled.CurrentRow?.DataBoundItem as MonitoredProcess;
             else
@@ -259,26 +274,26 @@ namespace ProcessOverwatch.Controller
             var res = MessageBox.Show($"Delete process '{selected.FriendlyName}'?", "Confirm Delete", MessageBoxButtons.YesNo);
             if (res == DialogResult.Yes)
             {
-                Log.Information($"Deleting process: {selected.FriendlyName}");
-                AppState.Processes.Remove(selected);
-                SaveAndReload();
+                Log.Information("Deleting process: {FriendlyName}", selected.FriendlyName);
+                AppState.GetProcesses().Remove(selected);
+                await SaveAndReload();
             }
         }
 
-        private void btnConfig_Click(object sender, EventArgs e)
+        private async void BtnConfig_Click(object sender, EventArgs e)
         {
-            var form = new AppConfigForm(AppState.Config);
-            if (form.ShowDialog() == DialogResult.OK)
+            var form = new AppConfigForm(AppState.GetConfig());
+            if (await form.ShowDialogAsync() == DialogResult.OK)
             {
                 LogTextBox("Updating application configuration.");
                 Log.Information("Updating application configuration.");
-                AppState.Config = form.Config;
-                SaveAndReload();
+                AppState.SetConfig(form.Config);
+                await SaveAndReload();
             }
         }
-        private void dgvEnabled_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+        private async void DgvEnabled_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
         {
-            MonitoredProcess? selected = null;
+            MonitoredProcess? selected;
             selected = dgvEnabled.CurrentRow?.DataBoundItem as MonitoredProcess;
 
             if (selected == null)
@@ -288,16 +303,16 @@ namespace ProcessOverwatch.Controller
             }
 
             var form = new ProcessConfigForm(selected);
-            if (form.ShowDialog() == DialogResult.OK)
+            if (await form.ShowDialogAsync() == DialogResult.OK)
             {
-                ModifyProcess(selected, form.Process);
+                await ModifyProcess(selected, form.Process);
             }
 
         }
 
-        private void dgvDisabled_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+        private async void DgvDisabled_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
         {
-            MonitoredProcess? selected = null;
+            MonitoredProcess? selected;
             selected = dgvDisabled.CurrentRow?.DataBoundItem as MonitoredProcess;
 
             if (selected == null)
@@ -307,32 +322,28 @@ namespace ProcessOverwatch.Controller
             }
 
             var form = new ProcessConfigForm(selected);
-            if (form.ShowDialog() == DialogResult.OK)
+            if (await form.ShowDialogAsync() == DialogResult.OK)
             {
-                ModifyProcess(selected, form.Process);
+                await ModifyProcess(selected, form.Process);
             }
 
         }
 
-        private void ModifyProcess( MonitoredProcess monitoredProcess, MonitoredProcess updatedMonitoredProcess)
+        private async Task ModifyProcess( MonitoredProcess monitoredProcess, MonitoredProcess updatedMonitoredProcess)
         {
-            if (AppState.Processes.Any(p => string.Equals(p.ExecutablePath, updatedMonitoredProcess.ExecutablePath, StringComparison.OrdinalIgnoreCase)))
+            if (AppState.GetProcesses().Any(p => string.Equals(p.ExecutablePath, updatedMonitoredProcess.ExecutablePath, StringComparison.OrdinalIgnoreCase)) && monitoredProcess.ExecutablePath != updatedMonitoredProcess.ExecutablePath)
             {
-                // Check if the selected process is the same as the one being edited
-                if (monitoredProcess.ExecutablePath != updatedMonitoredProcess.ExecutablePath)
-                {
-                    MessageBox.Show("A process with the same executable path already exists.", "Duplicate Entry", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
+                MessageBox.Show("A process with the same executable path already exists.", "Duplicate Entry", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
-            int index = AppState.Processes.FindIndex(x => x == monitoredProcess);
+            int index = AppState.GetProcesses().FindIndex(x => x == monitoredProcess);
             if (index != -1)
             {
-                AppState.Processes[index] = updatedMonitoredProcess;
+                AppState.GetProcesses()[index] = updatedMonitoredProcess;
             }
             LogTextBox($"Editing process: {updatedMonitoredProcess.FriendlyName}");
-            Log.Information($"Editing process: {updatedMonitoredProcess.FriendlyName}");
-            SaveAndReload();
+            Log.Information("Editing process: {FriendlyName}", updatedMonitoredProcess.FriendlyName);
+            await SaveAndReload();
 
         }
 
@@ -351,44 +362,85 @@ namespace ProcessOverwatch.Controller
             }
         }
 
-        private void notifySystemTrayIcon_MouseDoubleClick(object sender, MouseEventArgs e)
+        private void NotifySystemTrayIcon_MouseDoubleClick(object sender, MouseEventArgs e)
         {
             this.WindowState = FormWindowState.Normal;
         }
 
-        private void SaveAndReload()
+        private async Task SaveAndReload()
         {
             AppState.SaveState();
             LoadState();
             SetupDataBindings();
+            await RefreshRemoteAgentsAsync();
             SetupTimer();
             LogTextBox("Configuration saved and reloaded.");
         }
 
+        private async Task RefreshRemoteAgentsAsync()
+        {
+            // Build the set of addresses that SHOULD be connected
+            var desiredAddresses = _processesEnabled
+                .Where(p => !string.IsNullOrEmpty(p.IPAddress))
+                .Select(p => p.IPAddress)
+                .Distinct()
+                .Select(ip => $@"akka.tcp://ProcessOverwatchAgent@{ip}:8935/user/agent")
+                .ToHashSet();
+
+            // Remove agents whose address is no longer in the desired set
+            _remoteAgents.RemoveAll(a => !desiredAddresses.Any(addr => a.Path.ToString().Contains(addr)));
+
+            // Determine which addresses are already connected
+            var connectedAddresses = _remoteAgents
+                .Select(a => a.Path.ToString())
+                .ToHashSet();
+
+            // Connect to new addresses that aren't already connected
+            foreach (var address in desiredAddresses.Where(a => !connectedAddresses.Any(c => c.Contains(a))))
+            {
+                try
+                {
+                    IActorRef remoteActor = await _actorSystem!.ActorSelection(address).ResolveOne(TimeSpan.FromSeconds(10));
+                    _remoteAgents.Add(remoteActor);
+                    LogTextBox($"Connected to remote agent at {address}");
+                }
+                catch (ActorNotFoundException ex)
+                {
+                    Log.Warning(ex, "Remote agent not available at {Address}", address);
+                    LogTextBox(Properties.Resources.Remote_Agent_Not_Available + address);  
+                }
+            }
+        }
+
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            _actorSystem.Terminate().Wait();
+            _actorSystem?.Terminate().Wait();
             base.OnFormClosing(e);
         }
 
-        private void MainForm_Load(object sender, EventArgs e)
+        private async void MainForm_Load(object sender, EventArgs e)
+        {
+            await MainForm_LoadAsync();
+        }
+
+        private async Task MainForm_LoadAsync()
         {
             LoadState();
 
             SetupDataBindings();
 
-            SetupActors();
+            await SetupActorsAsync();
 
             SetupTimer();
 
-            if(AppState.Config.AutoStartMonitoring)
+            if(AppState.GetConfig().AutoStartMonitoring)
             {
                 InvokeMonitoringProcess();
             }
 
         }
 
-        private void btnStartMonitoring_Click(object sender, EventArgs e)
+        private void BtnStartMonitoring_Click(object sender, EventArgs e)
         {
             InvokeMonitoringProcess();
         }
@@ -415,6 +467,10 @@ namespace ProcessOverwatch.Controller
         }
         private void StartOrStopMonitoring()
         {
+            if (_isExecutingMonitorCheck)
+                return;
+
+            _isExecutingMonitorCheck = true;
             try
             {
                 // Filter local and remote processes
@@ -422,7 +478,7 @@ namespace ProcessOverwatch.Controller
                 var remoteProcesses = _processesEnabled.Where(p => !string.IsNullOrEmpty(p.IPAddress)).ToList();
 
                 // Send local processes to LocalMonitorActor
-                if (localProcesses.Any())
+                if (localProcesses.Count != 0)
                 {
                     _localCoordinatorActor.Tell(new CheckProcess(localProcesses));
                 }
@@ -433,7 +489,7 @@ namespace ProcessOverwatch.Controller
                     var agent = _remoteAgents.FirstOrDefault(a => a.Path.ToString().Contains(group.Key));
                     if (agent != null)
                     {
-                        agent.Tell(new CheckProcess(group.ToList()), _localCoordinatorActor);
+                        agent.Tell(new CheckProcess([.. group]), _localCoordinatorActor);
                     }
                     else
                     {
@@ -441,13 +497,17 @@ namespace ProcessOverwatch.Controller
                     }
                 }
 
-                _nextCheck = DateTime.Now.AddMinutes(AppState.Config.MonitorIntervalMinutes);
+                _nextCheck = DateTime.Now.AddMinutes(AppState.GetConfig().MonitorIntervalMinutes);
                 InvokeToNextCheckLabel($"Next Check At: {_nextCheck:HH:mm}");
             }
             catch (Exception ex)
             {
                 Log.Error(ex, "Failure in Monitoring");
                 LogTextBox($"Monitoring error: {ex.Message}");
+            }
+            finally
+            {
+                _isExecutingMonitorCheck = false;
             }
         }
 

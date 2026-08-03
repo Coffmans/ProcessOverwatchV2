@@ -178,7 +178,7 @@
             btnOK.TabIndex = 14;
             btnOK.Text = "OK";
             btnOK.UseVisualStyleBackColor = true;
-            btnOK.Click += btnOK_Click;
+            btnOK.Click += BtnOK_Click;
             // 
             // btnCancel
             // 
@@ -188,7 +188,7 @@
             btnCancel.TabIndex = 15;
             btnCancel.Text = "Cancel";
             btnCancel.UseVisualStyleBackColor = true;
-            btnCancel.Click += btnCancel_Click;
+            btnCancel.Click += BtnCancel_Click;
             // 
             // btnShowPassword
             // 
@@ -198,7 +198,7 @@
             btnShowPassword.Size = new Size(30, 23);
             btnShowPassword.TabIndex = 16;
             btnShowPassword.UseVisualStyleBackColor = true;
-            btnShowPassword.Click += button1_Click;
+            btnShowPassword.Click += BtnTogglePassword_Click;
             // 
             // chkAutostartMonitoring
             // 
