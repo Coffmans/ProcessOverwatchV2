@@ -21,7 +21,7 @@ jobs:
       with:
         dotnet-version: 10.0.x
     - name: Restore dependencies
-      run: dotnet restore ProcessOverwatch.Controller.sln
+      run: dotnet restore ProcessOverwatch.Controller/ProcessOverwatch.Controller.sln
     - name: Build Shared
       run: dotnet build ProcessOverwatch.Shared.csproj --no-restore
     - name: Build Agent
