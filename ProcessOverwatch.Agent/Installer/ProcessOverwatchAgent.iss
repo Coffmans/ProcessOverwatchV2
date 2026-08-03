@@ -1,5 +1,5 @@
-#define MyAppName "Process Overwatch Agent"
-#define MyAppShortName "Process Overwatch Agent"
+#define MyAppName "ProcessOverwatchAgent"
+#define MyAppShortName "ProcessOverwatchAgent"
 #define MyAppVersion GetVersionNumbersString("..\bin\Release\net9.0-windows\publish\ProcessOverwatch.Agent.exe")
 #define Copyright = 'Copyright © '+GetDateTimeString('yyyy','','')
 
@@ -26,24 +26,24 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: {app}; Permissions: everyone-modify
 
 [Files]
-Source: "..\bin\Release\net9.0-windows\publish\ProcessOverwatch.Agent.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\bin\Release\net9.0-windows\publish\appsettings.json"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\bin\Release\net9.0-windows\publish\appsettings.Development.json"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\bin\Release\publish\ProcessOverwatch.Agent.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\bin\Release\publish\appsettings.json"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\bin\Release\publish\appsettings.Development.json"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\Uninstall ProcessOverwatch Agent"; Filename: "{uninstallexe}"
 
 [Run]
-Filename: {sys}\sc.exe; Parameters: "create ProcessOverwatchService start=auto binPath= ""{app}\ProcessOverwatch.Agent.exe"" DisplayName= ""Process Overwatch Service""" ; Flags: runhidden
-Filename: {sys}\sc.exe; Parameters: "start processoverwatchservice" ; Flags: runhidden waituntilterminated
+Filename: {sys}\sc.exe; Parameters: "create ProcessOverwatchAgent start=auto binPath= ""{app}\ProcessOverwatch.Agent.exe"" DisplayName= ""ProcessOverwatchAgent""" ; Flags: runhidden
+Filename: {sys}\sc.exe; Parameters: "start processoverwatchagent" ; Flags: runhidden waituntilterminated
 
 [UninstallRun]
-Filename: {sys}\sc.exe; Parameters: "stop ProcessOverwatchService" ; Flags: runhidden 
-Filename: {sys}\sc.exe; Parameters: "delete ProcessOverwatchService" ; Flags: runhidden
+Filename: "sc.exe"; Parameters: "stop ProcessOverwatchAgent"; Flags: runhidden waituntilterminated; RunOnceId: "StopService"
+Filename: "sc.exe"; Parameters: "delete ProcessOverwatchAgent"; Flags: runhidden waituntilterminated; RunOnceId: "DeleteService"
 
 [Code]
 const
-  MyServiceName = 'ProcessOverwatchService'; 
+  MyServiceName = 'ProcessOverwatchAgent'; 
   
 function DoesServiceExist(ServiceName: String): Boolean;
 var
