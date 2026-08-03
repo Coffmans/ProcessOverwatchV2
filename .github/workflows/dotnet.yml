@@ -26,7 +26,11 @@ jobs:
       run: dotnet build ProcessOverwatch.Shared/ProcessOverwatch.Shared.csproj --no-restore
     - name: Build Agent
       run: dotnet build ProcessOverwatch.Agent/ProcessOverwatch.Agent.csproj --no-restore
-    - name: Build Shared
+    - name: Build Controller
       run: dotnet build ProcessOverwatch.Controller/ProcessOverwatch.Controller.csproj --no-restore
-    - name: Test
-      run: dotnet test --no-build --verbosity normal
+    - name: Test Shared
+      run: dotnet test ProcessOverwatch.Shared/ProcessOverwatch.Shared.csproj --no-build --verbosity normal
+    - name: Test Agent
+      run: dotnet test ProcessOverwatch.Shared/ProcessOverwatch.Shared.csproj --no-build --verbosity normal
+    - name: Test Controller
+      run: dotnet test ProcessOverwatch.Controller/ProcessOverwatch.Controller.csproj --no-build --verbosity normal
