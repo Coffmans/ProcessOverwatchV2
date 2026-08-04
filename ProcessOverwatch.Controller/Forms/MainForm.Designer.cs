@@ -58,7 +58,7 @@
             tabControl.Name = "tabControl";
             tabControl.SelectedIndex = 0;
             tabControl.Size = new Size(1158, 332);
-            tabControl.TabIndex = 0;
+            tabControl.TabIndex = 1;
             // 
             // tabEnabled
             // 
@@ -122,7 +122,7 @@
             btnAddProcess.Location = new Point(1176, 64);
             btnAddProcess.Name = "btnAddProcess";
             btnAddProcess.Size = new Size(100, 30);
-            btnAddProcess.TabIndex = 1;
+            btnAddProcess.TabIndex = 2;
             btnAddProcess.Text = "Add Process";
             btnAddProcess.UseVisualStyleBackColor = true;
             btnAddProcess.Click += BtnAddProcess_Click;
@@ -133,7 +133,7 @@
             btnEditProcess.Location = new Point(1176, 104);
             btnEditProcess.Name = "btnEditProcess";
             btnEditProcess.Size = new Size(100, 30);
-            btnEditProcess.TabIndex = 2;
+            btnEditProcess.TabIndex = 3;
             btnEditProcess.Text = "Edit Process";
             btnEditProcess.UseVisualStyleBackColor = true;
             btnEditProcess.Click += BtnEditProcess_Click;
@@ -144,7 +144,7 @@
             btnDeleteProcess.Location = new Point(1176, 144);
             btnDeleteProcess.Name = "btnDeleteProcess";
             btnDeleteProcess.Size = new Size(100, 30);
-            btnDeleteProcess.TabIndex = 3;
+            btnDeleteProcess.TabIndex = 4;
             btnDeleteProcess.Text = "Delete Process";
             btnDeleteProcess.UseVisualStyleBackColor = true;
             btnDeleteProcess.Click += BtnDeleteProcess_Click;
@@ -155,7 +155,7 @@
             btnConfig.Location = new Point(1176, 234);
             btnConfig.Name = "btnConfig";
             btnConfig.Size = new Size(100, 30);
-            btnConfig.TabIndex = 4;
+            btnConfig.TabIndex = 5;
             btnConfig.Text = "Settings";
             btnConfig.UseVisualStyleBackColor = true;
             btnConfig.Click += BtnConfig_Click;
@@ -166,7 +166,7 @@
             lblNextCheck.Location = new Point(12, 15);
             lblNextCheck.Name = "lblNextCheck";
             lblNextCheck.Size = new Size(84, 15);
-            lblNextCheck.TabIndex = 5;
+            lblNextCheck.TabIndex = 0;
             lblNextCheck.Text = "Next check at: ";
             // 
             // txtLog
@@ -178,7 +178,7 @@
             txtLog.ReadOnly = true;
             txtLog.ScrollBars = ScrollBars.Both;
             txtLog.Size = new Size(1264, 253);
-            txtLog.TabIndex = 6;
+            txtLog.TabIndex = 8;
             // 
             // btnStartMonitoring
             // 
@@ -186,7 +186,7 @@
             btnStartMonitoring.Location = new Point(1176, 335);
             btnStartMonitoring.Name = "btnStartMonitoring";
             btnStartMonitoring.Size = new Size(100, 30);
-            btnStartMonitoring.TabIndex = 7;
+            btnStartMonitoring.TabIndex = 6;
             btnStartMonitoring.Text = "Start";
             btnStartMonitoring.UseVisualStyleBackColor = true;
             btnStartMonitoring.Click += BtnStartMonitoring_Click;
@@ -197,7 +197,7 @@
             label1.Location = new Point(16, 392);
             label1.Name = "label1";
             label1.Size = new Size(51, 15);
-            label1.TabIndex = 8;
+            label1.TabIndex = 7;
             label1.Text = "Logging";
             // 
             // notifySystemTrayIcon

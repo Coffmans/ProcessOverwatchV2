@@ -103,7 +103,7 @@
             chkEnabled.Location = new Point(447, 118);
             chkEnabled.Name = "chkEnabled";
             chkEnabled.Size = new Size(68, 19);
-            chkEnabled.TabIndex = 7;
+            chkEnabled.TabIndex = 9;
             chkEnabled.Text = "Enabled";
             chkEnabled.UseVisualStyleBackColor = true;
             // 
@@ -113,7 +113,7 @@
             chkRestart.Location = new Point(538, 118);
             chkRestart.Name = "chkRestart";
             chkRestart.Size = new Size(143, 19);
-            chkRestart.TabIndex = 8;
+            chkRestart.TabIndex = 10;
             chkRestart.Text = "Restart if Not Running";
             chkRestart.UseVisualStyleBackColor = true;
             // 
@@ -122,7 +122,7 @@
             btnOK.Location = new Point(257, 158);
             btnOK.Name = "btnOK";
             btnOK.Size = new Size(90, 30);
-            btnOK.TabIndex = 9;
+            btnOK.TabIndex = 11;
             btnOK.Text = "OK";
             btnOK.UseVisualStyleBackColor = true;
             btnOK.Click += BtnOK_Click;
@@ -132,7 +132,7 @@
             btnCancel.Location = new Point(367, 158);
             btnCancel.Name = "btnCancel";
             btnCancel.Size = new Size(90, 30);
-            btnCancel.TabIndex = 10;
+            btnCancel.TabIndex = 12;
             btnCancel.Text = "Cancel";
             btnCancel.UseVisualStyleBackColor = true;
             btnCancel.Click += BtnCancel_Click;
@@ -143,7 +143,7 @@
             label1.Location = new Point(6, 120);
             label1.Name = "label1";
             label1.Size = new Size(98, 15);
-            label1.TabIndex = 11;
+            label1.TabIndex = 7;
             label1.Text = "Remote IP/Name";
             // 
             // txtRemoteIP
@@ -151,7 +151,7 @@
             txtRemoteIP.Location = new Point(110, 116);
             txtRemoteIP.Name = "txtRemoteIP";
             txtRemoteIP.Size = new Size(331, 23);
-            txtRemoteIP.TabIndex = 12;
+            txtRemoteIP.TabIndex = 8;
             // 
             // btnTestForProcess
             // 
