@@ -250,7 +250,7 @@ namespace ProcessOverwatch.Controller
                 return;
             }
 
-            var form = new ProcessConfigForm(selected);
+            var form = new ProcessConfigForm(selected, _actorSystem);
             if (await form.ShowDialogAsync() == DialogResult.OK)
             {
                 await ModifyProcess(selected, form.Process);
@@ -302,7 +302,7 @@ namespace ProcessOverwatch.Controller
                 return;
             }
 
-            var form = new ProcessConfigForm(selected);
+            var form = new ProcessConfigForm(selected, _actorSystem);
             if (await form.ShowDialogAsync() == DialogResult.OK)
             {
                 await ModifyProcess(selected, form.Process);
@@ -321,7 +321,7 @@ namespace ProcessOverwatch.Controller
                 return;
             }
 
-            var form = new ProcessConfigForm(selected);
+            var form = new ProcessConfigForm(selected, _actorSystem);
             if (await form.ShowDialogAsync() == DialogResult.OK)
             {
                 await ModifyProcess(selected, form.Process);
@@ -489,7 +489,7 @@ namespace ProcessOverwatch.Controller
                     var agent = _remoteAgents.FirstOrDefault(a => a.Path.ToString().Contains(group.Key));
                     if (agent != null)
                     {
-                        agent.Tell(new CheckProcess([.. group]), _localCoordinatorActor);
+                        agent.Tell(new CheckProcess(group.ToList()), _localCoordinatorActor);
                     }
                     else
                     {

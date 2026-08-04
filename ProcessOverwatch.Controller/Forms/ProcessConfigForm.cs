@@ -1,4 +1,5 @@
-﻿using ProcessOverwatch.Shared;
+﻿using Akka.Actor;
+using ProcessOverwatch.Shared;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -14,10 +15,12 @@ namespace ProcessOverwatch.Controller
     public partial class ProcessConfigForm : Form
     {
         public MonitoredProcess Process { get; private set; }
+        private readonly ActorSystem? _actorSystem;
 
-        public ProcessConfigForm(MonitoredProcess? process = null)
+        public ProcessConfigForm(MonitoredProcess? process = null, ActorSystem? actorSystem = null)
         {
             InitializeComponent();
+            _actorSystem = actorSystem;
 
             if (process is null)
             {
@@ -71,6 +74,181 @@ namespace ProcessOverwatch.Controller
             chkEnabled.Checked = Process.IsEnabled;
             chkRestart.Checked = Process.RestartIfNotRunning;
             txtRemoteIP.Text = Process.IPAddress;
+        }
+
+        private async void BtnTestForProcess_Click(object sender, EventArgs e)
+        {
+            var exePath = txtExePath.Text.Trim();
+
+            if (string.IsNullOrWhiteSpace(exePath))
+            {
+                MessageBox.Show("Executable path is required to test.", "Test", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var ipAddress = txtRemoteIP.Text.Trim();
+            var processName = Path.GetFileNameWithoutExtension(exePath);
+
+            if (string.IsNullOrEmpty(ipAddress))
+            {
+                TestLocalProcess(processName, exePath);
+            }
+            else
+            {
+                await TestRemoteProcessAsync(processName, exePath, ipAddress);
+            }
+        }
+
+        private void TestLocalProcess(string processName, string exePath)
+        {
+            bool isRunning = System.Diagnostics.Process.GetProcessesByName(processName).Length != 0;
+
+            if (isRunning)
+            {
+                MessageBox.Show($"✅ '{processName}' is currently running on this machine.",
+                    "Test Result", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            if (!File.Exists(exePath))
+            {
+                MessageBox.Show(
+                    $"❌ '{processName}' is NOT running and the executable was not found at:\n\n{exePath}\n\n" +
+                    "The process cannot be restarted with this path.",
+                    "Test Result", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            if (chkRestart.Checked)
+            {
+                var result = MessageBox.Show(
+                    $"❌ '{processName}' is NOT running, but the executable was found.\n\n" +
+                    "Restart is enabled. Would you like to attempt to start it now?",
+                    "Test Result", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+                if (result == DialogResult.Yes)
+                {
+                    try
+                    {
+                        var startInfo = new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = exePath,
+                            Arguments = txtArguments.Text.Trim(),
+                            UseShellExecute = true
+                        };
+
+                        System.Diagnostics.Process.Start(startInfo);
+                        Thread.Sleep(1500);
+
+                        bool nowRunning = System.Diagnostics.Process.GetProcessesByName(processName).Length != 0;
+
+                        if (nowRunning)
+                        {
+                            MessageBox.Show($"🔁 Successfully started '{processName}'.",
+                                "Test Result", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                        else
+                        {
+                            MessageBox.Show($"⚠️ Start command was issued but '{processName}' was not detected running.",
+                                "Test Result", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"⚠️ Failed to start '{processName}'.\n\n{ex.Message}",
+                            "Test Result", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+            else
+            {
+                MessageBox.Show(
+                    $"❌ '{processName}' is NOT running.\n\n" +
+                    $"The executable was found at:\n{exePath}\n\n" +
+                    "Restart is not enabled for this process.",
+                    "Test Result", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private async Task TestRemoteProcessAsync(string processName, string exePath, string ipAddress)
+        {
+            // First verify the remote machine is reachable
+            try
+            {
+                using var ping = new System.Net.NetworkInformation.Ping();
+                var reply = ping.Send(ipAddress, 3000);
+
+                if (reply.Status != System.Net.NetworkInformation.IPStatus.Success)
+                {
+                    MessageBox.Show(
+                        $"❌ Remote machine '{ipAddress}' is NOT reachable (status: {reply.Status}).\n\n" +
+                        "Ensure the machine is online and the agent is installed.",
+                        "Test Result", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"⚠️ Failed to reach remote machine '{ipAddress}'.\n\n{ex.Message}",
+                    "Test Result", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // Now attempt to contact the remote agent and check the process
+            if (_actorSystem is null)
+            {
+                MessageBox.Show(
+                    $"✅ Remote machine '{ipAddress}' is reachable, but the actor system is not available.\n\n" +
+                    "Start monitoring first to enable full remote process testing.",
+                    "Test Result", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            try
+            {
+                var agentAddress = $"akka.tcp://ProcessOverwatchAgent@{ipAddress}:8935/user/agent";
+                var remoteAgent = await _actorSystem.ActorSelection(agentAddress).ResolveOne(TimeSpan.FromSeconds(10));
+
+                // Build a temporary process to check
+                var testProcess = new MonitoredProcess
+                {
+                    FriendlyName = txtFriendlyName.Text.Trim(),
+                    ExecutablePath = exePath,
+                    Arguments = txtArguments.Text.Trim(),
+                    IsEnabled = true,
+                    RestartIfNotRunning = chkRestart.Checked,
+                    IPAddress = ipAddress
+                };
+
+                // Ask the remote agent to check the process
+                var response = await remoteAgent.Ask<ProcessStatusResponse>(
+                    new CheckProcess([testProcess]),
+                    TimeSpan.FromSeconds(15));
+
+                string restartInfo = chkRestart.Checked && !response.IsRunning
+                    ? "\n\nRestart is enabled — the agent attempted to start the process."
+                    : "";
+
+                MessageBox.Show(
+                    $"Remote agent on '{ipAddress}' ({response.MachineName}) responded:\n\n" +
+                    $"{response.Status}{restartInfo}",
+                    "Test Result", MessageBoxButtons.OK,
+                    response.IsRunning ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+            }
+            catch (ActorNotFoundException)
+            {
+                MessageBox.Show(
+                    $"✅ Remote machine '{ipAddress}' is reachable, but the ProcessOverwatch Agent is not running.\n\n" +
+                    "Ensure the agent service is installed and started on the remote machine.",
+                    "Test Result", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"⚠️ Failed to communicate with the remote agent on '{ipAddress}'.\n\n{ex.Message}",
+                    "Test Result", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
     }
 }

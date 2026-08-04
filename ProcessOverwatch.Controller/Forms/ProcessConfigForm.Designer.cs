@@ -36,6 +36,7 @@
             btnCancel = new Button();
             label1 = new Label();
             txtRemoteIP = new TextBox();
+            btnTestForProcess = new Button();
             SuspendLayout();
             // 
             // lblFriendlyName
@@ -99,7 +100,7 @@
             // chkEnabled
             // 
             chkEnabled.AutoSize = true;
-            chkEnabled.Location = new Point(447, 120);
+            chkEnabled.Location = new Point(447, 118);
             chkEnabled.Name = "chkEnabled";
             chkEnabled.Size = new Size(68, 19);
             chkEnabled.TabIndex = 7;
@@ -152,9 +153,20 @@
             txtRemoteIP.Size = new Size(331, 23);
             txtRemoteIP.TabIndex = 12;
             // 
+            // btnTestForProcess
+            // 
+            btnTestForProcess.Location = new Point(606, 162);
+            btnTestForProcess.Name = "btnTestForProcess";
+            btnTestForProcess.Size = new Size(75, 23);
+            btnTestForProcess.TabIndex = 13;
+            btnTestForProcess.Text = "Test";
+            btnTestForProcess.UseVisualStyleBackColor = true;
+            btnTestForProcess.Click += BtnTestForProcess_Click;
+            // 
             // ProcessConfigForm
             // 
             ClientSize = new Size(715, 200);
+            Controls.Add(btnTestForProcess);
             Controls.Add(txtRemoteIP);
             Controls.Add(label1);
             Controls.Add(btnCancel);
@@ -180,5 +192,6 @@
         }
         private Label label1;
         private TextBox txtRemoteIP;
+        private Button btnTestForProcess;
     }
 }

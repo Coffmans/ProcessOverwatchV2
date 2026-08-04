@@ -51,6 +51,7 @@
             // 
             // tabControl
             // 
+            tabControl.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             tabControl.Controls.Add(tabEnabled);
             tabControl.Controls.Add(tabDisabled);
             tabControl.Location = new Point(12, 40);
@@ -74,9 +75,9 @@
             // 
             dgvEnabled.AllowUserToAddRows = false;
             dgvEnabled.AllowUserToDeleteRows = false;
+            dgvEnabled.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             dgvEnabled.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dgvEnabled.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dgvEnabled.Dock = DockStyle.Fill;
             dgvEnabled.Location = new Point(3, 3);
             dgvEnabled.MultiSelect = false;
             dgvEnabled.Name = "dgvEnabled";
@@ -117,41 +118,45 @@
             // 
             // btnAddProcess
             // 
+            btnAddProcess.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             btnAddProcess.Location = new Point(1176, 64);
             btnAddProcess.Name = "btnAddProcess";
             btnAddProcess.Size = new Size(100, 30);
             btnAddProcess.TabIndex = 1;
-            btnAddProcess.Text = "Add";
+            btnAddProcess.Text = "Add Process";
             btnAddProcess.UseVisualStyleBackColor = true;
             btnAddProcess.Click += BtnAddProcess_Click;
             // 
             // btnEditProcess
             // 
+            btnEditProcess.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             btnEditProcess.Location = new Point(1176, 104);
             btnEditProcess.Name = "btnEditProcess";
             btnEditProcess.Size = new Size(100, 30);
             btnEditProcess.TabIndex = 2;
-            btnEditProcess.Text = "Edit";
+            btnEditProcess.Text = "Edit Process";
             btnEditProcess.UseVisualStyleBackColor = true;
             btnEditProcess.Click += BtnEditProcess_Click;
             // 
             // btnDeleteProcess
             // 
+            btnDeleteProcess.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             btnDeleteProcess.Location = new Point(1176, 144);
             btnDeleteProcess.Name = "btnDeleteProcess";
             btnDeleteProcess.Size = new Size(100, 30);
             btnDeleteProcess.TabIndex = 3;
-            btnDeleteProcess.Text = "Delete";
+            btnDeleteProcess.Text = "Delete Process";
             btnDeleteProcess.UseVisualStyleBackColor = true;
             btnDeleteProcess.Click += BtnDeleteProcess_Click;
             // 
             // btnConfig
             // 
+            btnConfig.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             btnConfig.Location = new Point(1176, 234);
             btnConfig.Name = "btnConfig";
             btnConfig.Size = new Size(100, 30);
             btnConfig.TabIndex = 4;
-            btnConfig.Text = "Config";
+            btnConfig.Text = "Settings";
             btnConfig.UseVisualStyleBackColor = true;
             btnConfig.Click += BtnConfig_Click;
             // 
@@ -166,16 +171,18 @@
             // 
             // txtLog
             // 
+            txtLog.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             txtLog.Location = new Point(12, 409);
             txtLog.Multiline = true;
             txtLog.Name = "txtLog";
             txtLog.ReadOnly = true;
-            txtLog.ScrollBars = ScrollBars.Vertical;
+            txtLog.ScrollBars = ScrollBars.Both;
             txtLog.Size = new Size(1264, 253);
             txtLog.TabIndex = 6;
             // 
             // btnStartMonitoring
             // 
+            btnStartMonitoring.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             btnStartMonitoring.Location = new Point(1176, 335);
             btnStartMonitoring.Name = "btnStartMonitoring";
             btnStartMonitoring.Size = new Size(100, 30);
@@ -195,6 +202,7 @@
             // 
             // notifySystemTrayIcon
             // 
+            notifySystemTrayIcon.BalloonTipIcon = ToolTipIcon.Info;
             notifySystemTrayIcon.BalloonTipText = "Process Overwatch";
             notifySystemTrayIcon.Icon = (Icon)resources.GetObject("notifySystemTrayIcon.Icon");
             notifySystemTrayIcon.Text = "Process Overwatch";
