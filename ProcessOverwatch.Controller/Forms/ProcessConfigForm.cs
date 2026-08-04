@@ -15,6 +15,8 @@ namespace ProcessOverwatch.Controller
     public partial class ProcessConfigForm : Form
     {
         public MonitoredProcess Process { get; private set; }
+
+        private const string TestResult = "Test Result";
         private readonly ActorSystem? _actorSystem;
 
         public ProcessConfigForm(MonitoredProcess? process = null, ActorSystem? actorSystem = null)
@@ -95,7 +97,7 @@ namespace ProcessOverwatch.Controller
             }
             else
             {
-                await TestRemoteProcessAsync(processName, exePath, ipAddress);
+                await TestRemoteProcessAsync(exePath, ipAddress);
             }
         }
 
@@ -106,7 +108,7 @@ namespace ProcessOverwatch.Controller
             if (isRunning)
             {
                 MessageBox.Show($"✅ '{processName}' is currently running on this machine.",
-                    "Test Result", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    TestResult, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -115,7 +117,7 @@ namespace ProcessOverwatch.Controller
                 MessageBox.Show(
                     $"❌ '{processName}' is NOT running and the executable was not found at:\n\n{exePath}\n\n" +
                     "The process cannot be restarted with this path.",
-                    "Test Result", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    TestResult, MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
@@ -124,7 +126,7 @@ namespace ProcessOverwatch.Controller
                 var result = MessageBox.Show(
                     $"❌ '{processName}' is NOT running, but the executable was found.\n\n" +
                     "Restart is enabled. Would you like to attempt to start it now?",
-                    "Test Result", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                    TestResult, MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
 
                 if (result == DialogResult.Yes)
                 {
@@ -145,18 +147,18 @@ namespace ProcessOverwatch.Controller
                         if (nowRunning)
                         {
                             MessageBox.Show($"🔁 Successfully started '{processName}'.",
-                                "Test Result", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                TestResult, MessageBoxButtons.OK, MessageBoxIcon.Information);
                         }
                         else
                         {
                             MessageBox.Show($"⚠️ Start command was issued but '{processName}' was not detected running.",
-                                "Test Result", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                TestResult, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         }
                     }
                     catch (Exception ex)
                     {
                         MessageBox.Show($"⚠️ Failed to start '{processName}'.\n\n{ex.Message}",
-                            "Test Result", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            TestResult, MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
             }
@@ -166,11 +168,11 @@ namespace ProcessOverwatch.Controller
                     $"❌ '{processName}' is NOT running.\n\n" +
                     $"The executable was found at:\n{exePath}\n\n" +
                     "Restart is not enabled for this process.",
-                    "Test Result", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    TestResult, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 
-        private async Task TestRemoteProcessAsync(string processName, string exePath, string ipAddress)
+        private async Task TestRemoteProcessAsync(string exePath, string ipAddress)
         {
             // First verify the remote machine is reachable
             try
@@ -183,7 +185,7 @@ namespace ProcessOverwatch.Controller
                     MessageBox.Show(
                         $"❌ Remote machine '{ipAddress}' is NOT reachable (status: {reply.Status}).\n\n" +
                         "Ensure the machine is online and the agent is installed.",
-                        "Test Result", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        TestResult, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
             }
@@ -191,7 +193,7 @@ namespace ProcessOverwatch.Controller
             {
                 MessageBox.Show(
                     $"⚠️ Failed to reach remote machine '{ipAddress}'.\n\n{ex.Message}",
-                    "Test Result", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    TestResult, MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
@@ -201,7 +203,7 @@ namespace ProcessOverwatch.Controller
                 MessageBox.Show(
                     $"✅ Remote machine '{ipAddress}' is reachable, but the actor system is not available.\n\n" +
                     "Start monitoring first to enable full remote process testing.",
-                    "Test Result", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    TestResult, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -233,7 +235,7 @@ namespace ProcessOverwatch.Controller
                 MessageBox.Show(
                     $"Remote agent on '{ipAddress}' ({response.MachineName}) responded:\n\n" +
                     $"{response.Status}{restartInfo}",
-                    "Test Result", MessageBoxButtons.OK,
+                    TestResult, MessageBoxButtons.OK,
                     response.IsRunning ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
             }
             catch (ActorNotFoundException)
@@ -241,13 +243,13 @@ namespace ProcessOverwatch.Controller
                 MessageBox.Show(
                     $"✅ Remote machine '{ipAddress}' is reachable, but the ProcessOverwatch Agent is not running.\n\n" +
                     "Ensure the agent service is installed and started on the remote machine.",
-                    "Test Result", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    TestResult, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
             catch (Exception ex)
             {
                 MessageBox.Show(
                     $"⚠️ Failed to communicate with the remote agent on '{ipAddress}'.\n\n{ex.Message}",
-                    "Test Result", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    TestResult, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }
