@@ -12,4 +12,14 @@ It is a work-in-progress and needs to be thoroughly tested.
   <li>Ability to send email notifications</li>
 </ul>
 
-Screenshots will be coming...
+Main Window
+<img width="1306" height="706" alt="image" src="https://github.com/user-attachments/assets/8e844739-e47f-4c3b-9a61-65dfd29276cc" />
+
+Add/Edit Process Window for Local Process
+<img width="717" height="232" alt="image" src="https://github.com/user-attachments/assets/d12877e3-1491-4819-8e22-2c32add006b1" />
+
+Add/Edit Process Window for Remote Process
+<img width="715" height="200" alt="image" src="https://github.com/user-attachments/assets/11561290-c0a7-4ba5-b24e-210505ff1ef6" />
+
+
+
