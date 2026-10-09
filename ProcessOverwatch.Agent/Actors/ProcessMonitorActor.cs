@@ -31,6 +31,7 @@ namespace ProcessOverwatch.Agent.Actors
         private void CheckProcessStatus(MonitoredProcess process)
         {
             string status;
+            bool wasRestarted = false;
             bool isRunning = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(process.ExecutablePath)).Length != 0;
             if (isRunning)
             {
@@ -45,24 +46,39 @@ namespace ProcessOverwatch.Agent.Actors
                 {
                     try
                     {
-                        var startInfo = new ProcessStartInfo
+                        if (Environment.UserInteractive)
                         {
-                            FileName = process.ExecutablePath,
-                            Arguments = process.Arguments ?? "",
-                            UseShellExecute = true
-                        };
+                            // Console mode: already running on the user's desktop
+                            var startInfo = new ProcessStartInfo
+                            {
+                                FileName = process.ExecutablePath,
+                                Arguments = process.Arguments ?? "",
+                                UseShellExecute = true
+                            };
 
-                        Process.Start(startInfo);
+                            Process.Start(startInfo);
+                        }
+                        else
+                        {
+                            // Service mode: launch on the logged-on user's desktop rather than in session 0 as SYSTEM
+                            UserSessionLauncher.StartInUserSession(process.ExecutablePath, process.Arguments ?? "");
+                        }
                         isRunning = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(process.ExecutablePath)).Length != 0;
 
                         if (isRunning)
                         {
+                            wasRestarted = true;
                             status = $"🔁 Restarted {process.FriendlyName} on {Environment.MachineName}!";
                         }
                         else
                             status = $"⚠️ Failed to restart {process.FriendlyName} on {Environment.MachineName}.";
                         Log.Information(status);
 
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        status = $"⚠️ Cannot restart {process.FriendlyName} on {Environment.MachineName}: {ex.Message}";
+                        Log.Warning(ex, "⚠️ Failed to restart {FriendlyName}", process.FriendlyName);
                     }
                     catch (Exception ex)
                     {
@@ -79,7 +95,8 @@ namespace ProcessOverwatch.Agent.Actors
                 isRunning,
                 Environment.MachineName,
                 process.IPAddress,
-                status
+                status,
+                wasRestarted
             ));
         }
     }

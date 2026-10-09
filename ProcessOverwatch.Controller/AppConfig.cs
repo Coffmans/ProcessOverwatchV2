@@ -15,6 +15,8 @@ namespace ProcessOverwatch.Controller
 
         public string SmtpServer { get; set; } = "";
         public int SmtpPort { get; set; } = 587;
+        // Defaults to true so existing configs keep their previous behavior
+        public bool SmtpEnableSsl { get; set; } = true;
         public string SmtpUser { get; set; } = "";
         public string SmtpPassword { get; set; } = "";
 

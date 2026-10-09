@@ -22,6 +22,7 @@ namespace ProcessOverwatch.Controller
 
             txtSmtpServer.Text = Config.SmtpServer;
             numSmtpPort.Value = Config.SmtpPort > 0 ? Config.SmtpPort : 587;
+            chkEnableSsl.Checked = Config.SmtpEnableSsl;
             txtSmtpUser.Text = Config.SmtpUser;
             txtSmtpPass.Text = Config.SmtpPassword;
             txtFromEmail.Text = Config.EmailFrom;
@@ -55,6 +56,7 @@ namespace ProcessOverwatch.Controller
 
             Config.SmtpServer = txtSmtpServer.Text.Trim();
             Config.SmtpPort = (int)numSmtpPort.Value;
+            Config.SmtpEnableSsl = chkEnableSsl.Checked;
             Config.SmtpUser = txtSmtpUser.Text.Trim();
             Config.SmtpPassword = txtSmtpPass.Text;
             Config.EmailFrom = txtFromEmail.Text.Trim();

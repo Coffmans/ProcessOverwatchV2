@@ -47,6 +47,7 @@
             btnCancel = new Button();
             btnShowPassword = new Button();
             chkAutostartMonitoring = new CheckBox();
+            chkEnableSsl = new CheckBox();
             ((System.ComponentModel.ISupportInitialize)numSmtpPort).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numCheckInterval).BeginInit();
             SuspendLayout();
@@ -86,13 +87,23 @@
             numSmtpPort.TabIndex = 3;
             numSmtpPort.Value = new decimal(new int[] { 587, 0, 0, 0 });
             // 
+            // chkEnableSsl
+            // 
+            chkEnableSsl.AutoSize = true;
+            chkEnableSsl.Location = new Point(280, 50);
+            chkEnableSsl.Name = "chkEnableSsl";
+            chkEnableSsl.Size = new Size(68, 19);
+            chkEnableSsl.TabIndex = 4;
+            chkEnableSsl.Text = "Use SSL";
+            chkEnableSsl.UseVisualStyleBackColor = true;
+            // 
             // lblSmtpUser
             // 
             lblSmtpUser.AutoSize = true;
             lblSmtpUser.Location = new Point(20, 85);
             lblSmtpUser.Name = "lblSmtpUser";
             lblSmtpUser.Size = new Size(64, 15);
-            lblSmtpUser.TabIndex = 4;
+            lblSmtpUser.TabIndex = 5;
             lblSmtpUser.Text = "SMTP User";
             // 
             // txtSmtpUser
@@ -100,7 +111,7 @@
             txtSmtpUser.Location = new Point(140, 82);
             txtSmtpUser.Name = "txtSmtpUser";
             txtSmtpUser.Size = new Size(247, 23);
-            txtSmtpUser.TabIndex = 5;
+            txtSmtpUser.TabIndex = 6;
             // 
             // lblSmtpPass
             // 
@@ -108,7 +119,7 @@
             lblSmtpPass.Location = new Point(20, 120);
             lblSmtpPass.Name = "lblSmtpPass";
             lblSmtpPass.Size = new Size(91, 15);
-            lblSmtpPass.TabIndex = 6;
+            lblSmtpPass.TabIndex = 7;
             lblSmtpPass.Text = "SMTP Password";
             // 
             // txtSmtpPass
@@ -116,7 +127,7 @@
             txtSmtpPass.Location = new Point(140, 117);
             txtSmtpPass.Name = "txtSmtpPass";
             txtSmtpPass.Size = new Size(220, 23);
-            txtSmtpPass.TabIndex = 7;
+            txtSmtpPass.TabIndex = 8;
             txtSmtpPass.UseSystemPasswordChar = true;
             // 
             // lblFromEmail
@@ -125,7 +136,7 @@
             lblFromEmail.Location = new Point(20, 155);
             lblFromEmail.Name = "lblFromEmail";
             lblFromEmail.Size = new Size(67, 15);
-            lblFromEmail.TabIndex = 8;
+            lblFromEmail.TabIndex = 9;
             lblFromEmail.Text = "From Email";
             // 
             // txtFromEmail
@@ -133,7 +144,7 @@
             txtFromEmail.Location = new Point(140, 152);
             txtFromEmail.Name = "txtFromEmail";
             txtFromEmail.Size = new Size(247, 23);
-            txtFromEmail.TabIndex = 9;
+            txtFromEmail.TabIndex = 10;
             // 
             // lblToEmail
             // 
@@ -141,7 +152,7 @@
             lblToEmail.Location = new Point(20, 190);
             lblToEmail.Name = "lblToEmail";
             lblToEmail.Size = new Size(52, 15);
-            lblToEmail.TabIndex = 10;
+            lblToEmail.TabIndex = 11;
             lblToEmail.Text = "To Email";
             // 
             // txtToEmail
@@ -149,7 +160,7 @@
             txtToEmail.Location = new Point(140, 187);
             txtToEmail.Name = "txtToEmail";
             txtToEmail.Size = new Size(247, 23);
-            txtToEmail.TabIndex = 11;
+            txtToEmail.TabIndex = 12;
             // 
             // lblCheckInterval
             // 
@@ -157,7 +168,7 @@
             lblCheckInterval.Location = new Point(20, 225);
             lblCheckInterval.Name = "lblCheckInterval";
             lblCheckInterval.Size = new Size(104, 15);
-            lblCheckInterval.TabIndex = 12;
+            lblCheckInterval.TabIndex = 13;
             lblCheckInterval.Text = "Check Interval (m)";
             // 
             // numCheckInterval
@@ -167,7 +178,7 @@
             numCheckInterval.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             numCheckInterval.Name = "numCheckInterval";
             numCheckInterval.Size = new Size(120, 23);
-            numCheckInterval.TabIndex = 13;
+            numCheckInterval.TabIndex = 14;
             numCheckInterval.Value = new decimal(new int[] { 60, 0, 0, 0 });
             // 
             // btnOK
@@ -175,7 +186,7 @@
             btnOK.Location = new Point(106, 268);
             btnOK.Name = "btnOK";
             btnOK.Size = new Size(90, 30);
-            btnOK.TabIndex = 14;
+            btnOK.TabIndex = 15;
             btnOK.Text = "OK";
             btnOK.UseVisualStyleBackColor = true;
             btnOK.Click += BtnOK_Click;
@@ -185,7 +196,7 @@
             btnCancel.Location = new Point(226, 268);
             btnCancel.Name = "btnCancel";
             btnCancel.Size = new Size(90, 30);
-            btnCancel.TabIndex = 15;
+            btnCancel.TabIndex = 16;
             btnCancel.Text = "Cancel";
             btnCancel.UseVisualStyleBackColor = true;
             btnCancel.Click += BtnCancel_Click;
@@ -196,7 +207,7 @@
             btnShowPassword.Location = new Point(359, 117);
             btnShowPassword.Name = "btnShowPassword";
             btnShowPassword.Size = new Size(30, 23);
-            btnShowPassword.TabIndex = 16;
+            btnShowPassword.TabIndex = 17;
             btnShowPassword.UseVisualStyleBackColor = true;
             btnShowPassword.Click += BtnTogglePassword_Click;
             // 
@@ -206,7 +217,7 @@
             chkAutostartMonitoring.Location = new Point(312, 226);
             chkAutostartMonitoring.Name = "chkAutostartMonitoring";
             chkAutostartMonitoring.Size = new Size(75, 19);
-            chkAutostartMonitoring.TabIndex = 17;
+            chkAutostartMonitoring.TabIndex = 18;
             chkAutostartMonitoring.Text = "Autostart";
             chkAutostartMonitoring.UseVisualStyleBackColor = true;
             // 
@@ -214,6 +225,7 @@
             // 
             ClientSize = new Size(399, 315);
             Controls.Add(chkAutostartMonitoring);
+            Controls.Add(chkEnableSsl);
             Controls.Add(btnShowPassword);
             Controls.Add(btnCancel);
             Controls.Add(btnOK);
@@ -244,6 +256,7 @@
         }
         private Button btnShowPassword;
         private CheckBox chkAutostartMonitoring;
+        private CheckBox chkEnableSsl;
     }
 
 }

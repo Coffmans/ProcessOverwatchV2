@@ -29,11 +29,8 @@ namespace ProcessOverwatch.Controller.Actors
                 _form.UpdateProcessStatus(response);
             }
 
-            // Notify EmailNotifierActor for non-running processes
-            if (!response.IsRunning)
-            {
-                _form.GetNotifierActor().Tell(response);
-            }
+            // The notifier decides what is worth an email; it also needs running results to clear earlier alerts
+            _form.GetNotifierActor().Tell(response);
         }
     }
 }

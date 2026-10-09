@@ -39,6 +39,7 @@ namespace ProcessOverwatch.Controller.Actors
 
 
                 string status;
+                bool wasRestarted = false;
                 if (isRunning)
                 {
                     status = $"✅ {process.FriendlyName} is running.";
@@ -54,11 +55,25 @@ namespace ProcessOverwatch.Controller.Actors
                         try
                         {
 
-                            Process.Start(process.ExecutablePath);
-                            status = $"🔁 Restarted {process.FriendlyName}.";
-                            Log.Information("🔁 Restarted {FriendlyName}.", process.FriendlyName);
+                            Process.Start(new ProcessStartInfo
+                            {
+                                FileName = process.ExecutablePath,
+                                Arguments = process.Arguments ?? "",
+                                UseShellExecute = true
+                            });
 
                             isRunning = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(process.ExecutablePath)).Length != 0;
+                            if (isRunning)
+                            {
+                                wasRestarted = true;
+                                status = $"🔁 Restarted {process.FriendlyName}.";
+                                Log.Information("🔁 Restarted {FriendlyName}.", process.FriendlyName);
+                            }
+                            else
+                            {
+                                status = $"⚠️ Failed to restart {process.FriendlyName}.";
+                                Log.Warning("⚠️ Failed to restart {FriendlyName}.", process.FriendlyName);
+                            }
                         }
                         catch (Exception ex)
                         {
@@ -75,7 +90,8 @@ namespace ProcessOverwatch.Controller.Actors
                     isRunning,
                     Environment.MachineName,
                     process.IPAddress,
-                    status
+                    status,
+                    wasRestarted
                 ));
             }
         }

@@ -1,4 +1,4 @@
-using Akka.Actor;
+﻿using Akka.Actor;
 using Akka.Configuration;
 using ProcessOverwatch.Controller.Actors;
 using ProcessOverwatch.Shared;
@@ -24,7 +24,6 @@ namespace ProcessOverwatch.Controller
         private IActorRef _localMonitorActor = null!;
         private IActorRef _statusUpdateActor = null!;
         private IActorRef _localCoordinatorActor = null!;
-        private readonly List<IActorRef> _remoteAgents = [];
         private IActorRef notifierActor = null!;
 
         private readonly System.Timers.Timer _timer = new();
@@ -45,7 +44,11 @@ namespace ProcessOverwatch.Controller
 
         private delegate void InvokeNextCheckLabelDelegate(string sText);
 
-        public MainForm() => InitializeComponent();
+        public MainForm()
+        {
+            InitializeComponent();
+            _timer.Elapsed += MonitorTimer;
+        }
 
         private void LoadState()
         {
@@ -137,9 +140,11 @@ namespace ProcessOverwatch.Controller
             });
         }
 
-        private async Task SetupActorsAsync()
+        private void SetupActors()
         {
-            var config = ConfigurationFactory.ParseString(@"
+            // Port 0 lets the OS pick a free port so the controller can run alongside a local agent (which owns 8935)
+            var config = ConfigurationFactory.ParseString($"akka.remote.dot-netty.tcp.public-hostname = \"{NetworkHelper.GetPublicHostname()}\"")
+                .WithFallback(ConfigurationFactory.ParseString(@"
             akka {
                 actor {
                     provider = remote
@@ -147,37 +152,16 @@ namespace ProcessOverwatch.Controller
                 remote {
                     dot-netty.tcp {
                         hostname = ""0.0.0.0""
-                        public-hostname = ""192.168.1.139""
-                        port = 8935
+                        port = 0
                     }
                 }
-            }");
+            }"));
 
             _actorSystem = ActorSystem.Create("ProcessMonitor", config);
             _statusUpdateActor = _actorSystem.ActorOf(Props.Create(() => new StatusUpdateActor(this)), "statusUpdate");
             _localMonitorActor = _actorSystem.ActorOf(Props.Create(() => new LocalMonitorActor(_statusUpdateActor)), "localMonitor");
             _localCoordinatorActor = _actorSystem.ActorOf(Props.Create(() => new CoordinatorActor(_statusUpdateActor, _localMonitorActor)), "localCoordinator");
-            SetNotifierActor(_actorSystem.ActorOf(Props.Create(() => new EmailNotifierActor(AppState.GetConfig()))));
-
-            
-            var remoteAddresses = new List<string>();
-            var remoteProcesses = _processesEnabled.Where(p => !string.IsNullOrEmpty(p.IPAddress)).ToList();
-            remoteAddresses.AddRange(from process in remoteProcesses
-                                     where !remoteAddresses.Contains(process.IPAddress)
-                                     select $@"akka.tcp://ProcessOverwatchAgent@{process.IPAddress}:8935/user/agent");
-            foreach (var address in remoteAddresses)
-            {
-                try
-                {
-                    var remoteActor = await _actorSystem.ActorSelection(address).ResolveOne(TimeSpan.FromSeconds(10));
-                    _remoteAgents.Add(remoteActor);
-                }
-                catch (ActorNotFoundException ex)
-                {
-                    // Log and continue - remote agent not available
-                    Log.Warning(ex, "Remote agent not available at {Address}", address);
-                }
-            }
+            SetNotifierActor(_actorSystem.ActorOf(Props.Create(() => new EmailNotifierActor()), "emailNotifier"));
         }
 
         private void InvokeToNextCheckLabel(string sText)
@@ -197,20 +181,20 @@ namespace ProcessOverwatch.Controller
             _nextCheck = DateTime.Now.AddMinutes(AppState.GetConfig().MonitorIntervalMinutes);
             lblNextCheck.Text = $"Next Check At: {_nextCheck:HH:mm}";
 
-            _timer.Elapsed += new ElapsedEventHandler(MonitorTimer!);
-            _timer.Enabled = true;
+            // Only tick while monitoring; the Elapsed handler is attached once in the constructor
+            _timer.Enabled = _isMonitoring;
         }
 
-        private void MonitorTimer(object source, ElapsedEventArgs e)
+        private async void MonitorTimer(object? source, ElapsedEventArgs e)
         {
-            StartOrStopMonitoring();
+            await RunMonitorCheckAsync();
         }
 
         private void LogTextBox(string message)
         {
             if (txtLog.InvokeRequired)
             {
-                txtLog.Invoke(() => (DateTime.Now + " - " + message + Environment.NewLine) + txtLog.Text);
+                txtLog.Invoke(() => txtLog.Text = (DateTime.Now + " - " + message + Environment.NewLine) + txtLog.Text);
             }
             else
             {
@@ -232,7 +216,7 @@ namespace ProcessOverwatch.Controller
                 Log.Information("Adding process: {FriendlyName}", form.Process.FriendlyName);
                 LogTextBox($"Adding process: {form.Process.FriendlyName}");
                 AppState.GetProcesses().Add(form.Process);
-                await SaveAndReload();
+                SaveAndReload();
             }
         }
 
@@ -276,7 +260,7 @@ namespace ProcessOverwatch.Controller
             {
                 Log.Information("Deleting process: {FriendlyName}", selected.FriendlyName);
                 AppState.GetProcesses().Remove(selected);
-                await SaveAndReload();
+                SaveAndReload();
             }
         }
 
@@ -288,7 +272,7 @@ namespace ProcessOverwatch.Controller
                 LogTextBox("Updating application configuration.");
                 Log.Information("Updating application configuration.");
                 AppState.SetConfig(form.Config);
-                await SaveAndReload();
+                SaveAndReload();
             }
         }
         private async void DgvEnabled_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
@@ -343,7 +327,7 @@ namespace ProcessOverwatch.Controller
             }
             LogTextBox($"Editing process: {updatedMonitoredProcess.FriendlyName}");
             Log.Information("Editing process: {FriendlyName}", updatedMonitoredProcess.FriendlyName);
-            await SaveAndReload();
+            SaveAndReload();
 
         }
 
@@ -367,49 +351,13 @@ namespace ProcessOverwatch.Controller
             this.WindowState = FormWindowState.Normal;
         }
 
-        private async Task SaveAndReload()
+        private void SaveAndReload()
         {
             AppState.SaveState();
             LoadState();
             SetupDataBindings();
-            await RefreshRemoteAgentsAsync();
             SetupTimer();
             LogTextBox("Configuration saved and reloaded.");
-        }
-
-        private async Task RefreshRemoteAgentsAsync()
-        {
-            // Build the set of addresses that SHOULD be connected
-            var desiredAddresses = _processesEnabled
-                .Where(p => !string.IsNullOrEmpty(p.IPAddress))
-                .Select(p => p.IPAddress)
-                .Distinct()
-                .Select(ip => $@"akka.tcp://ProcessOverwatchAgent@{ip}:8935/user/agent")
-                .ToHashSet();
-
-            // Remove agents whose address is no longer in the desired set
-            _remoteAgents.RemoveAll(a => !desiredAddresses.Any(addr => a.Path.ToString().Contains(addr)));
-
-            // Determine which addresses are already connected
-            var connectedAddresses = _remoteAgents
-                .Select(a => a.Path.ToString())
-                .ToHashSet();
-
-            // Connect to new addresses that aren't already connected
-            foreach (var address in desiredAddresses.Where(a => !connectedAddresses.Any(c => c.Contains(a))))
-            {
-                try
-                {
-                    IActorRef remoteActor = await _actorSystem!.ActorSelection(address).ResolveOne(TimeSpan.FromSeconds(10));
-                    _remoteAgents.Add(remoteActor);
-                    LogTextBox($"Connected to remote agent at {address}");
-                }
-                catch (ActorNotFoundException ex)
-                {
-                    Log.Warning(ex, "Remote agent not available at {Address}", address);
-                    LogTextBox(Properties.Resources.Remote_Agent_Not_Available + address);  
-                }
-            }
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
@@ -429,7 +377,7 @@ namespace ProcessOverwatch.Controller
 
             SetupDataBindings();
 
-            await SetupActorsAsync();
+            SetupActors();
 
             SetupTimer();
 
@@ -465,7 +413,7 @@ namespace ProcessOverwatch.Controller
             }
 
         }
-        private void StartOrStopMonitoring()
+        private async Task RunMonitorCheckAsync()
         {
             if (_isExecutingMonitorCheck)
                 return;
@@ -483,19 +431,10 @@ namespace ProcessOverwatch.Controller
                     _localCoordinatorActor.Tell(new CheckProcess(localProcesses));
                 }
 
-                // Send remote processes to appropriate Agents
-                foreach (var group in remoteProcesses.GroupBy(p => p.IPAddress))
-                {
-                    var agent = _remoteAgents.FirstOrDefault(a => a.Path.ToString().Contains(group.Key));
-                    if (agent != null)
-                    {
-                        agent.Tell(new CheckProcess([.. group]), _localCoordinatorActor);
-                    }
-                    else
-                    {
-                        LogTextBox($"Process Watchdog agent not found for {group.Key}");
-                    }
-                }
+                // Send remote processes to their agents, checking all machines in parallel
+                await Task.WhenAll(remoteProcesses
+                    .GroupBy(p => p.IPAddress)
+                    .Select(group => CheckRemoteMachineAsync(group.Key, [.. group])));
 
                 _nextCheck = DateTime.Now.AddMinutes(AppState.GetConfig().MonitorIntervalMinutes);
                 InvokeToNextCheckLabel($"Next Check At: {_nextCheck:HH:mm}");
@@ -509,6 +448,58 @@ namespace ProcessOverwatch.Controller
             {
                 _isExecutingMonitorCheck = false;
             }
+        }
+
+        private async Task CheckRemoteMachineAsync(string ipAddress, List<MonitoredProcess> processes)
+        {
+            // Resolve the agent on every check: a cached reference silently stops working if the agent restarts
+            var address = $@"akka.tcp://ProcessOverwatchAgent@{ipAddress}:8935/user/agent";
+            try
+            {
+                var agent = await _actorSystem!.ActorSelection(address).ResolveOne(TimeSpan.FromSeconds(10));
+                agent.Tell(new CheckProcess(processes), _localCoordinatorActor);
+                GetNotifierActor().Tell(new RemoteMachineReachable(ipAddress));
+            }
+            catch (ActorNotFoundException ex)
+            {
+                bool machineResponds = await PingAsync(ipAddress);
+                string status = machineResponds
+                    ? $"⚠️ Agent not responding on {ipAddress}"
+                    : $"⚠️ Machine {ipAddress} is not reachable";
+
+                Log.Warning(ex, "Remote agent not available at {Address}", address);
+                LogTextBox(status);
+                SetProcessStatus(processes, status);
+
+                GetNotifierActor().Tell(new RemoteMachineUnreachable(ipAddress, machineResponds, [.. processes.Select(p => p.FriendlyName)]));
+            }
+        }
+
+        private static async Task<bool> PingAsync(string ipAddress)
+        {
+            try
+            {
+                using var ping = new System.Net.NetworkInformation.Ping();
+                var reply = await ping.SendPingAsync(ipAddress, 3000);
+                return reply.Status == System.Net.NetworkInformation.IPStatus.Success;
+            }
+            catch (System.Net.NetworkInformation.PingException)
+            {
+                return false;
+            }
+        }
+
+        private void SetProcessStatus(List<MonitoredProcess> processes, string status)
+        {
+            if (InvokeRequired)
+            {
+                Invoke(() => SetProcessStatus(processes, status));
+                return;
+            }
+
+            foreach (var process in processes)
+                process.Status = status;
+            _processesEnabled.ResetBindings();
         }
 
         public void UpdateProcessStatus(ProcessStatusResponse response)

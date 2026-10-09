@@ -2,6 +2,7 @@
 using Akka.Configuration;
 using Microsoft.Extensions.Logging;
 using ProcessOverwatch.Agent.Actors;
+using ProcessOverwatch.Shared;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -51,7 +52,8 @@ namespace ProcessOverwatch.Agent
 
                 // Signal cancellation and wait for the main task to complete
                 _cts.Cancel();
-                _mainTask?.Wait(5000); // Wait up to 5 seconds for graceful shutdown
+                if (_mainTask != null && !_mainTask.Wait(5000)) // Wait up to 5 seconds for graceful shutdown
+                    EventLog.WriteEntry(ServiceName, "Shutdown did not complete within 5 seconds.", EventLogEntryType.Warning);
             }
             catch (Exception ex)
             {
@@ -116,7 +118,9 @@ namespace ProcessOverwatch.Agent
             {
                 EventLog.WriteEntry(ServiceName, "ExecuteAsync started.", EventLogEntryType.Information);
 
-                var config = ConfigurationFactory.ParseString(@"
+                var publicHostname = NetworkHelper.GetPublicHostname();
+                var config = ConfigurationFactory.ParseString($"akka.remote.dot-netty.tcp.public-hostname = \"{publicHostname}\"")
+                    .WithFallback(ConfigurationFactory.ParseString(@"
                     akka {
                         actor {
                             provider = remote
@@ -124,21 +128,24 @@ namespace ProcessOverwatch.Agent
                         remote {
                             dot-netty.tcp {
                                 hostname = ""0.0.0.0""
-                                public-hostname = ""192.168.1.139""
                                 port = 8935
                             }
                         }
-                    }");
+                    }"));
 
                 _actorSystem = ActorSystem.Create("ProcessOverwatchAgent", config);
                 _actorSystem.ActorOf(Props.Create(() => new ProcessMonitorActor()), "agent");
 
-                EventLog.WriteEntry(ServiceName, "Actor system started, listening on port 8935.", EventLogEntryType.Information);
+                EventLog.WriteEntry(ServiceName, $"Actor system started, listening on port 8935 as {publicHostname}.", EventLogEntryType.Information);
 
                 // Keep running until cancelled
                 await Task.Delay(Timeout.Infinite, cancellationToken);
             }
-            catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // Normal shutdown
+            }
+            catch (Exception ex)
             {
                 EventLog.WriteEntry(ServiceName, $"Error in ExecuteAsync: {ex}", EventLogEntryType.Error);
                 _logger.LogError(ex, "Error in ExecuteAsync");
