@@ -1,14 +1,9 @@
-﻿using Akka.Actor;
+using Akka.Actor;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Net;
-using System.Net.Mail;
-using System.Net.NetworkInformation;
-using System.Text;
 using System.Threading.Tasks;
-using Serilog;
 using ProcessOverwatch.Shared;
 
 namespace ProcessOverwatch.Agent.Actors
@@ -18,86 +13,41 @@ namespace ProcessOverwatch.Agent.Actors
 
         public ProcessMonitorActor()
         {
-            Receive<CheckProcess>(HandleCheckProcess);
+            ReceiveAsync<CheckProcess>(HandleCheckProcess);
         }
 
-        private void HandleCheckProcess(CheckProcess msg)
+        private async Task HandleCheckProcess(CheckProcess msg)
         {
-            foreach (var process in msg.Processes)
+            // Capture before awaiting; Sender is only valid while handling the current message
+            var sender = Sender;
+
+            // Check processes in parallel so one process's retries don't delay the others
+            await Task.WhenAll(msg.Processes.Select(async process =>
             {
-                CheckProcessStatus(process);
-            }
+                var response = await ProcessChecker.CheckAsync(process, msg.RetryCount, msg.RetryDelaySeconds, StartProcess);
+
+                // Send status response back to Controller
+                sender.Tell(response);
+            }));
         }
-        private void CheckProcessStatus(MonitoredProcess process)
+
+        private static void StartProcess(MonitoredProcess process)
         {
-            string status;
-            bool wasRestarted = false;
-            bool isRunning = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(process.ExecutablePath)).Length != 0;
-            if (isRunning)
+            if (Environment.UserInteractive)
             {
-                status = $"✅ {process.FriendlyName} is running on {Environment.MachineName}.";
-                Log.Information(status);
+                // Console mode: already running on the user's desktop
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = process.ExecutablePath,
+                    Arguments = process.Arguments ?? "",
+                    UseShellExecute = true
+                });
             }
             else
             {
-                status = $"❌ {process.FriendlyName} is NOT running on {Environment.MachineName}!";
-                Log.Information(status);
-                if (process.RestartIfNotRunning)
-                {
-                    try
-                    {
-                        if (Environment.UserInteractive)
-                        {
-                            // Console mode: already running on the user's desktop
-                            var startInfo = new ProcessStartInfo
-                            {
-                                FileName = process.ExecutablePath,
-                                Arguments = process.Arguments ?? "",
-                                UseShellExecute = true
-                            };
-
-                            Process.Start(startInfo);
-                        }
-                        else
-                        {
-                            // Service mode: launch on the logged-on user's desktop rather than in session 0 as SYSTEM
-                            UserSessionLauncher.StartInUserSession(process.ExecutablePath, process.Arguments ?? "");
-                        }
-                        isRunning = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(process.ExecutablePath)).Length != 0;
-
-                        if (isRunning)
-                        {
-                            wasRestarted = true;
-                            status = $"🔁 Restarted {process.FriendlyName} on {Environment.MachineName}!";
-                        }
-                        else
-                            status = $"⚠️ Failed to restart {process.FriendlyName} on {Environment.MachineName}.";
-                        Log.Information(status);
-
-                    }
-                    catch (InvalidOperationException ex)
-                    {
-                        status = $"⚠️ Cannot restart {process.FriendlyName} on {Environment.MachineName}: {ex.Message}";
-                        Log.Warning(ex, "⚠️ Failed to restart {FriendlyName}", process.FriendlyName);
-                    }
-                    catch (Exception ex)
-                    {
-                        status = $"⚠️ Failed to restart {process.FriendlyName} on {Environment.MachineName} - Check Logging!";
-                        Log.Error(ex, "⚠️ Failed to restart {FriendlyName}", process.FriendlyName);
-                    }
-                }
+                // Service mode: launch on the logged-on user's desktop rather than in session 0 as SYSTEM
+                UserSessionLauncher.StartInUserSession(process.ExecutablePath, process.Arguments ?? "");
             }
-
-            // Send status response back to Controller
-            Sender.Tell(new ProcessStatusResponse(
-                process.FriendlyName,
-                process.ExecutablePath,
-                isRunning,
-                Environment.MachineName,
-                process.IPAddress,
-                status,
-                wasRestarted
-            ));
         }
     }
 }

@@ -223,18 +223,27 @@ namespace ProcessOverwatch.Controller
                     IPAddress = ipAddress
                 };
 
-                // Ask the remote agent to check the process
-                var response = await remoteAgent.Ask<ProcessStatusResponse>(
-                    new CheckProcess([testProcess]),
-                    TimeSpan.FromSeconds(15));
+                // Ask the remote agent to check the process, using the same retry settings as monitoring.
+                // Allow for every retry delay plus some slack, or a restart would time out before the agent answers.
+                var config = AppState.GetConfig();
+                var timeout = TimeSpan.FromSeconds(15 + (config.RetryCount + 1) * Math.Max(1, config.RetryDelaySeconds));
 
-                string restartInfo = chkRestart.Checked && !response.IsRunning
-                    ? "\n\nRestart is enabled — the agent attempted to start the process."
-                    : "";
+                Cursor = Cursors.WaitCursor;
+                ProcessStatusResponse response;
+                try
+                {
+                    response = await remoteAgent.Ask<ProcessStatusResponse>(
+                        new CheckProcess([testProcess], config.RetryCount, config.RetryDelaySeconds),
+                        timeout);
+                }
+                finally
+                {
+                    Cursor = Cursors.Default;
+                }
 
                 MessageBox.Show(
                     $"Remote agent on '{ipAddress}' ({response.MachineName}) responded:\n\n" +
-                    $"{response.Status}{restartInfo}",
+                    $"{response.Status}",
                     TestResult, MessageBoxButtons.OK,
                     response.IsRunning ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
             }

@@ -428,7 +428,7 @@ namespace ProcessOverwatch.Controller
                 // Send local processes to LocalMonitorActor
                 if (localProcesses.Count != 0)
                 {
-                    _localCoordinatorActor.Tell(new CheckProcess(localProcesses));
+                    _localCoordinatorActor.Tell(CreateCheckMessage(localProcesses));
                 }
 
                 // Send remote processes to their agents, checking all machines in parallel
@@ -457,7 +457,7 @@ namespace ProcessOverwatch.Controller
             try
             {
                 var agent = await _actorSystem!.ActorSelection(address).ResolveOne(TimeSpan.FromSeconds(10));
-                agent.Tell(new CheckProcess(processes), _localCoordinatorActor);
+                agent.Tell(CreateCheckMessage(processes), _localCoordinatorActor);
                 GetNotifierActor().Tell(new RemoteMachineReachable(ipAddress));
             }
             catch (ActorNotFoundException ex)
@@ -473,6 +473,12 @@ namespace ProcessOverwatch.Controller
 
                 GetNotifierActor().Tell(new RemoteMachineUnreachable(ipAddress, machineResponds, [.. processes.Select(p => p.FriendlyName)]));
             }
+        }
+
+        private static CheckProcess CreateCheckMessage(List<MonitoredProcess> processes)
+        {
+            var config = AppState.GetConfig();
+            return new CheckProcess(processes, config.RetryCount, config.RetryDelaySeconds);
         }
 
         private static async Task<bool> PingAsync(string ipAddress)

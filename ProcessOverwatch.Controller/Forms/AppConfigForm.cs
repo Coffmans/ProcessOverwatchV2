@@ -29,6 +29,8 @@ namespace ProcessOverwatch.Controller
             txtToEmail.Text = Config.EmailTo;
             numCheckInterval.Value = Config.MonitorIntervalMinutes > 0 ? Config.MonitorIntervalMinutes : 60;
             chkAutostartMonitoring.Checked = Config.AutoStartMonitoring;
+            numRetries.Value = Math.Clamp(Config.RetryCount, (int)numRetries.Minimum, (int)numRetries.Maximum);
+            numRetryDelay.Value = Math.Clamp(Config.RetryDelaySeconds, (int)numRetryDelay.Minimum, (int)numRetryDelay.Maximum);
         }
 
         private void BtnOK_Click(object sender, EventArgs e)
@@ -63,6 +65,8 @@ namespace ProcessOverwatch.Controller
             Config.EmailTo = txtToEmail.Text.Trim();
             Config.MonitorIntervalMinutes = (int)numCheckInterval.Value;
             Config.AutoStartMonitoring = chkAutostartMonitoring.Checked;
+            Config.RetryCount = (int)numRetries.Value;
+            Config.RetryDelaySeconds = (int)numRetryDelay.Value;
 
             DialogResult = DialogResult.OK;
             Close();

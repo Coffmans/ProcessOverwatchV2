@@ -25,6 +25,9 @@ namespace ProcessOverwatch.Controller
         public string EmailUser { get; set; } = "";
         public string EmailPass { get; set; } = "";
         public int MonitorIntervalMinutes { get; set; } = 5;
+        // Extra verify/restart attempts before a process is reported down, and the wait between them
+        public int RetryCount { get; set; } = 3;
+        public int RetryDelaySeconds { get; set; } = 10;
         public bool AutoStartMonitoring { get; set; } = false;
         public static string ConfigFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "ProcessOverwatch", "config.json");
 

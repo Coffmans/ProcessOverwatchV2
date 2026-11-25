@@ -48,8 +48,14 @@
             btnShowPassword = new Button();
             chkAutostartMonitoring = new CheckBox();
             chkEnableSsl = new CheckBox();
+            lblRetries = new Label();
+            numRetries = new NumericUpDown();
+            lblRetryDelay = new Label();
+            numRetryDelay = new NumericUpDown();
             ((System.ComponentModel.ISupportInitialize)numSmtpPort).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numCheckInterval).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)numRetries).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)numRetryDelay).BeginInit();
             SuspendLayout();
             // 
             // lblSmtpServer
@@ -66,7 +72,7 @@
             txtSmtpServer.Location = new Point(140, 12);
             txtSmtpServer.Name = "txtSmtpServer";
             txtSmtpServer.Size = new Size(249, 23);
-            txtSmtpServer.TabIndex = 1;
+            txtSmtpServer.TabIndex = 0;
             // 
             // lblSmtpPort
             // 
@@ -74,28 +80,18 @@
             lblSmtpPort.Location = new Point(20, 50);
             lblSmtpPort.Name = "lblSmtpPort";
             lblSmtpPort.Size = new Size(63, 15);
-            lblSmtpPort.TabIndex = 2;
+            lblSmtpPort.TabIndex = 1;
             lblSmtpPort.Text = "SMTP Port";
             // 
             // numSmtpPort
             // 
-            numSmtpPort.Location = new Point(140, 48);
+            numSmtpPort.Location = new Point(140, 46);
             numSmtpPort.Maximum = new decimal(new int[] { 65535, 0, 0, 0 });
             numSmtpPort.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             numSmtpPort.Name = "numSmtpPort";
             numSmtpPort.Size = new Size(120, 23);
-            numSmtpPort.TabIndex = 3;
+            numSmtpPort.TabIndex = 2;
             numSmtpPort.Value = new decimal(new int[] { 587, 0, 0, 0 });
-            // 
-            // chkEnableSsl
-            // 
-            chkEnableSsl.AutoSize = true;
-            chkEnableSsl.Location = new Point(280, 50);
-            chkEnableSsl.Name = "chkEnableSsl";
-            chkEnableSsl.Size = new Size(68, 19);
-            chkEnableSsl.TabIndex = 4;
-            chkEnableSsl.Text = "Use SSL";
-            chkEnableSsl.UseVisualStyleBackColor = true;
             // 
             // lblSmtpUser
             // 
@@ -103,7 +99,7 @@
             lblSmtpUser.Location = new Point(20, 85);
             lblSmtpUser.Name = "lblSmtpUser";
             lblSmtpUser.Size = new Size(64, 15);
-            lblSmtpUser.TabIndex = 5;
+            lblSmtpUser.TabIndex = 4;
             lblSmtpUser.Text = "SMTP User";
             // 
             // txtSmtpUser
@@ -111,7 +107,7 @@
             txtSmtpUser.Location = new Point(140, 82);
             txtSmtpUser.Name = "txtSmtpUser";
             txtSmtpUser.Size = new Size(247, 23);
-            txtSmtpUser.TabIndex = 6;
+            txtSmtpUser.TabIndex = 5;
             // 
             // lblSmtpPass
             // 
@@ -119,7 +115,7 @@
             lblSmtpPass.Location = new Point(20, 120);
             lblSmtpPass.Name = "lblSmtpPass";
             lblSmtpPass.Size = new Size(91, 15);
-            lblSmtpPass.TabIndex = 7;
+            lblSmtpPass.TabIndex = 6;
             lblSmtpPass.Text = "SMTP Password";
             // 
             // txtSmtpPass
@@ -127,7 +123,7 @@
             txtSmtpPass.Location = new Point(140, 117);
             txtSmtpPass.Name = "txtSmtpPass";
             txtSmtpPass.Size = new Size(220, 23);
-            txtSmtpPass.TabIndex = 8;
+            txtSmtpPass.TabIndex = 7;
             txtSmtpPass.UseSystemPasswordChar = true;
             // 
             // lblFromEmail
@@ -183,20 +179,20 @@
             // 
             // btnOK
             // 
-            btnOK.Location = new Point(106, 268);
+            btnOK.Location = new Point(106, 303);
             btnOK.Name = "btnOK";
             btnOK.Size = new Size(90, 30);
-            btnOK.TabIndex = 15;
+            btnOK.TabIndex = 20;
             btnOK.Text = "OK";
             btnOK.UseVisualStyleBackColor = true;
             btnOK.Click += BtnOK_Click;
             // 
             // btnCancel
             // 
-            btnCancel.Location = new Point(226, 268);
+            btnCancel.Location = new Point(226, 303);
             btnCancel.Name = "btnCancel";
             btnCancel.Size = new Size(90, 30);
-            btnCancel.TabIndex = 16;
+            btnCancel.TabIndex = 21;
             btnCancel.Text = "Cancel";
             btnCancel.UseVisualStyleBackColor = true;
             btnCancel.Click += BtnCancel_Click;
@@ -207,7 +203,7 @@
             btnShowPassword.Location = new Point(359, 117);
             btnShowPassword.Name = "btnShowPassword";
             btnShowPassword.Size = new Size(30, 23);
-            btnShowPassword.TabIndex = 17;
+            btnShowPassword.TabIndex = 8;
             btnShowPassword.UseVisualStyleBackColor = true;
             btnShowPassword.Click += BtnTogglePassword_Click;
             // 
@@ -217,15 +213,66 @@
             chkAutostartMonitoring.Location = new Point(312, 226);
             chkAutostartMonitoring.Name = "chkAutostartMonitoring";
             chkAutostartMonitoring.Size = new Size(75, 19);
-            chkAutostartMonitoring.TabIndex = 18;
+            chkAutostartMonitoring.TabIndex = 15;
             chkAutostartMonitoring.Text = "Autostart";
             chkAutostartMonitoring.UseVisualStyleBackColor = true;
             // 
+            // chkEnableSsl
+            // 
+            chkEnableSsl.AutoSize = true;
+            chkEnableSsl.Location = new Point(321, 48);
+            chkEnableSsl.Name = "chkEnableSsl";
+            chkEnableSsl.Size = new Size(66, 19);
+            chkEnableSsl.TabIndex = 3;
+            chkEnableSsl.Text = "Use SSL";
+            chkEnableSsl.UseVisualStyleBackColor = true;
+            // 
+            // lblRetries
+            // 
+            lblRetries.AutoSize = true;
+            lblRetries.Location = new Point(20, 260);
+            lblRetries.Name = "lblRetries";
+            lblRetries.Size = new Size(42, 15);
+            lblRetries.TabIndex = 16;
+            lblRetries.Text = "Retries";
+            // 
+            // numRetries
+            // 
+            numRetries.Location = new Point(140, 257);
+            numRetries.Maximum = new decimal(new int[] { 10, 0, 0, 0 });
+            numRetries.Name = "numRetries";
+            numRetries.Size = new Size(60, 23);
+            numRetries.TabIndex = 17;
+            numRetries.Value = new decimal(new int[] { 3, 0, 0, 0 });
+            // 
+            // lblRetryDelay
+            // 
+            lblRetryDelay.AutoSize = true;
+            lblRetryDelay.Location = new Point(233, 260);
+            lblRetryDelay.Name = "lblRetryDelay";
+            lblRetryDelay.Size = new Size(94, 15);
+            lblRetryDelay.TabIndex = 18;
+            lblRetryDelay.Text = "Retry Delay (sec)";
+            // 
+            // numRetryDelay
+            // 
+            numRetryDelay.Location = new Point(329, 257);
+            numRetryDelay.Maximum = new decimal(new int[] { 300, 0, 0, 0 });
+            numRetryDelay.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
+            numRetryDelay.Name = "numRetryDelay";
+            numRetryDelay.Size = new Size(60, 23);
+            numRetryDelay.TabIndex = 19;
+            numRetryDelay.Value = new decimal(new int[] { 10, 0, 0, 0 });
+            // 
             // AppConfigForm
             // 
-            ClientSize = new Size(399, 315);
+            ClientSize = new Size(399, 350);
             Controls.Add(chkAutostartMonitoring);
             Controls.Add(chkEnableSsl);
+            Controls.Add(numRetryDelay);
+            Controls.Add(lblRetryDelay);
+            Controls.Add(numRetries);
+            Controls.Add(lblRetries);
             Controls.Add(btnShowPassword);
             Controls.Add(btnCancel);
             Controls.Add(btnOK);
@@ -251,12 +298,18 @@
             Text = "Application Configuration";
             ((System.ComponentModel.ISupportInitialize)numSmtpPort).EndInit();
             ((System.ComponentModel.ISupportInitialize)numCheckInterval).EndInit();
+            ((System.ComponentModel.ISupportInitialize)numRetries).EndInit();
+            ((System.ComponentModel.ISupportInitialize)numRetryDelay).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
         private Button btnShowPassword;
         private CheckBox chkAutostartMonitoring;
         private CheckBox chkEnableSsl;
+        private Label lblRetries;
+        private NumericUpDown numRetries;
+        private Label lblRetryDelay;
+        private NumericUpDown numRetryDelay;
     }
 
 }
